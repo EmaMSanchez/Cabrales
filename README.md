@@ -65,4 +65,12 @@ npm start
 
 La prueba de navegador requiere Chrome instalado y el servidor HTTPS local en ejecución. `CABRALES_TEST_URL` permite usar otra URL y `CABRALES_SCREENSHOTS=1` guarda capturas en `reports/screenshots/`. Para WebKit, instalalo con `npm exec -- playwright-core install webkit` y ejecutá la suite con `CABRALES_ENGINE=webkit`.
 
-El build genera un servidor Astro para Node. En el alojamiento final configurá `STORYBLOK_PUBLIC_TOKEN` y `SITE_URL` con el dominio HTTPS. Serví los MP4 con soporte de solicitudes por rango (`206 Partial Content`). Si se necesita un entorno editorial desplegado, configurá Preview y Space ID en ese entorno y registrá su URL HTTPS en Storyblok. Hasta aprobar la salida, mantené `SITE_INDEXABLE=false`; incluso si se habilita, solo se indexa `/` con la Story publicada disponible.
+Fuera de Netlify, el build genera un servidor Astro para Node. Si lo alojás en otro proveedor, serví los MP4 con soporte de solicitudes por rango (`206 Partial Content`).
+
+### Desplegar en Netlify
+
+1. En Netlify elegí **Import an existing project → GitHub → EmaMSanchez/Cabrales** y seleccioná `main`. El archivo `netlify.toml` configura Node 24, `npm run build` y el directorio `dist`. Astro usa el adaptador de Netlify en esa plataforma y conserva el de Node en local.
+2. En **Project configuration → Environment variables**, cargá `STORYBLOK_PUBLIC_TOKEN` (token Public de Delivery API), `STORYBLOK_REGION=eu`, `SITE_URL` con el dominio HTTPS y `SITE_INDEXABLE=false` hasta aprobar la salida. Los valores para Astro deben estar disponibles en **Functions** si Netlify permite elegir el alcance. Volvé a desplegar después de cambiar variables.
+3. Para el Visual Editor, cargá también `STORYBLOK_PREVIEW_TOKEN` y `STORYBLOK_SPACE_ID` en el entorno que se usará de vista previa. Agregá su URL base HTTPS como entorno adicional en Storyblok y elegilo desde `cabrales-home-v2`. El frontend solo entrega borradores a solicitudes firmadas. No subas `.env` ni configures el token de Management en Netlify.
+
+La home consulta Storyblok desde el servidor. Una vez que la Story tenga su tipo dedicado y se publique, no necesita un nuevo build para leer cambios de contenido. Si se habilita la indexación, solo se indexa `/` con la Story publicada disponible.

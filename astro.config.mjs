@@ -1,4 +1,5 @@
 import { defineConfig, envField } from 'astro/config';
+import netlify from '@astrojs/netlify';
 import node from '@astrojs/node';
 import mkcert from 'vite-plugin-mkcert';
 
@@ -7,7 +8,7 @@ const env = (options) => envField.string({ context: 'server', access: 'secret', 
 
 export default defineConfig({
   output: 'server',
-  adapter: node({ mode: 'standalone' }),
+  adapter: process.env.NETLIFY === 'true' ? netlify() : node({ mode: 'standalone' }),
   session: false,
   devToolbar: { enabled: false },
   server: { host: 'localhost', port: 4321 },
