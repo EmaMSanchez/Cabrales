@@ -1,0 +1,7 @@
+---
+import Home from '../components/Home.astro';
+import { deliveryHeaders, readHome } from '../lib/storyblok.ts';
+const delivery = await readHome(Astro.url);
+deliveryHeaders(Astro.response.headers, delivery);
+---
+<Home delivery={delivery} />

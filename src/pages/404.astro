@@ -1,0 +1,14 @@
+---
+import Base from '../layouts/Base.astro';
+import { homeContent } from '../lib/content.ts';
+const { logo } = homeContent();
+Astro.response.status = 404;
+---
+<Base title="Página no encontrada | Cabrales" description="Volvé al inicio de Café Cabrales.">
+  <main class="not-found">
+    <a href="/" class="brand" aria-label="Cabrales, inicio"><img src={logo.src} alt="" width="88" height="54" /></a>
+    <h1 class="scene__heading"><span class="scene__script">Café Cabrales</span><span class="scene__title">Volvamos al comienzo</span></h1>
+    <p>No encontramos la página que buscabas.</p>
+    <a class="button" href="/">Ir al inicio</a>
+  </main>
+</Base>

@@ -1,0 +1,38 @@
+---
+import Icon from './Icon.astro';
+import type { HomeContent } from '../lib/content.ts';
+interface Props { home: HomeContent }
+const { home } = Astro.props;
+const { footer } = home;
+---
+
+<footer class="site-footer" id="contacto">
+  <div class="site-footer__inner">
+    <div class="site-footer__intro">
+      <a class="brand brand--footer" href="#inicio" aria-label="Cabrales, volver al inicio">
+        <img src={home.logo.src} alt="" width="88" height="54" loading="lazy" decoding="async" />
+      </a>
+      <p>{footer.tagline}</p>
+    </div>
+    <div>
+      <h2>Casa Central</h2>
+      <address>{footer.address}<br /><a href={footer.officePhone.href}>{footer.officePhone.label}</a></address>
+    </div>
+    <div>
+      <h2>Atención al consumidor</h2>
+      <p><a href={footer.supportPhone.href}>{footer.supportPhone.label}</a><br /><a href={footer.email.href}>{footer.email.label}</a></p>
+    </div>
+    <div>
+      <h2>Seguinos</h2>
+      <p class="site-footer__links">
+        {footer.socials.map(({ label, href }) => <a href={href}>{label}</a>)}
+      </p>
+      {footer.legal.length > 0 && (
+        <nav class="site-footer__legal" aria-label="Información legal">
+          {footer.legal.map(({ label, href }) => <a href={href}>{label}</a>)}
+        </nav>
+      )}
+    </div>
+    <a class="site-footer__up" href="#inicio" aria-label="Volver al inicio"><Icon name="arrowUp" size={18} /></a>
+  </div>
+</footer>

@@ -1,0 +1,29 @@
+---
+import { StoryblokPreview } from '@storyblok/astro';
+import Header from './Header.astro';
+import Journey from './Journey.astro';
+import Footer from './Footer.astro';
+import Base from '../layouts/Base.astro';
+import { HOME_SLUG, homeContent } from '../lib/content.ts';
+import { editorAttributes, type Delivery } from '../lib/storyblok.ts';
+
+interface Props { delivery: Delivery }
+const { delivery } = Astro.props;
+const home = homeContent(delivery.block);
+---
+
+<Base title={home.meta.title} description={home.meta.description} image={home.meta.image.src} canonical={delivery.canonical} indexable={delivery.indexable}>
+  <div class="skip-links">
+    <a href="#contenido">Ir al contenido</a>
+    <a href="#productos" data-linear-link>Ver los productos sin animación</a>
+  </div>
+  <Header home={home} />
+  <main id="contenido" tabindex="-1" {...editorAttributes(delivery.block, delivery.editing)}>
+    <Journey home={home} editing={delivery.editing} />
+  </main>
+  <Footer home={home} />
+  {delivery.editing && delivery.block?.component !== HOME_SLUG && (
+    <aside class="editor-notice">Vista del contenido local. Asigná a esta Story el tipo <strong>Cabrales · Home V2</strong> para editar la experiencia.</aside>
+  )}
+  {delivery.editing && <StoryblokPreview />}
+</Base>

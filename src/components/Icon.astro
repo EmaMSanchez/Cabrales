@@ -1,0 +1,16 @@
+---
+const icons = {
+  arrowDown: 'M128 48v160m-64-64 64 64 64-64',
+  arrowUp: 'M128 208V48m-64 64 64-64 64 64',
+  escape: 'M176 160v40H56V56h40m32-8h80v80m0-80-96 96',
+  lock: 'M72 112V80a56 56 0 0 1 112 0v32m-56 32v32m-56-64h112a16 16 0 0 1 16 16v64a16 16 0 0 1-16 16H72a16 16 0 0 1-16-16v-64a16 16 0 0 1 16-16Z',
+  pause: 'M96 48H72v160h24zm88 0h-24v160h24z',
+  play: 'M88 48v160l128-80L88 48Z',
+} as const;
+interface Props { name: keyof typeof icons; size?: number }
+const { name, size = 20 } = Astro.props;
+---
+
+<svg width={size} height={size} viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <path d={icons[name]} />
+</svg>

@@ -1,0 +1,89 @@
+---
+import SceneCard from './SceneCard.astro';
+import Icon from './Icon.astro';
+import { PORTRAIT_QUERY, type HomeContent } from '../lib/content.ts';
+import { editorAttributes } from '../lib/storyblok.ts';
+interface Props { home: HomeContent; editing: boolean }
+const { home, editing } = Astro.props;
+---
+
+<cabrales-journey
+  class="journey"
+  data-portrait={PORTRAIT_QUERY}
+  data-desktop={home.film.desktop}
+  data-mobile={home.film.mobile}
+  data-desktop-marks={JSON.stringify(home.film.desktopMarks)}
+  data-mobile-marks={JSON.stringify(home.film.mobileMarks)}
+  data-editor={editing ? '' : undefined}
+>
+  <div class="journey__stage">
+    <div class="journey__backdrop" aria-hidden="true">
+      <video class="journey__video" muted playsinline preload="none" tabindex="-1" disablepictureinpicture></video>
+    </div>
+
+    {home.scenes.map((scene, index) => {
+      const Heading = index === 0 ? 'h1' : 'h2';
+      const isEnd = scene.id === 'reunion';
+      const isOrigins = scene.id === 'origenes';
+      const words = isOrigins ? scene.title.split(/\s+/) : [];
+      const hasAlt = Boolean(scene.desktop.alt || scene.mobile.alt);
+      return (
+        <section class:list={['scene', `scene--${scene.id}`]} id={scene.anchor} aria-labelledby={`titulo-${scene.id}`} data-scene={scene.id} {...editorAttributes(scene.blok, editing)}>
+          <picture class="scene__still" aria-hidden={hasAlt ? undefined : 'true'}>
+            <source media={PORTRAIT_QUERY} srcset={scene.mobile.src} />
+            <img
+              src={scene.desktop.src}
+              alt={scene.desktop.alt || scene.mobile.alt}
+              width="1440"
+              height="810"
+              loading={index === 0 ? 'eager' : 'lazy'}
+              fetchpriority={index === 0 ? 'high' : 'auto'}
+              decoding="async"
+            />
+          </picture>
+          {scene.id === 'molido' && <span class="scene__echo" aria-hidden="true">{scene.script}</span>}
+          <div class="scene__layer">
+            <div class="scene__copy">
+              {isEnd && <div class="scene__lock"><Icon name="lock" size={22} /></div>}
+              <Heading id={`titulo-${scene.id}`} class="scene__heading" tabindex="-1">
+                <span class="scene__script">{scene.script}</span>
+                <span class="scene__title">
+                  {isOrigins ? words.map((word, wordIndex) => (
+                    <><span class="scene__word" style={`--word: ${wordIndex}`}>{word}</span>{wordIndex < words.length - 1 ? ' ' : ''}</>
+                  )) : scene.title}
+                </span>
+              </Heading>
+              {scene.kicker && <p class="scene__kicker">{scene.kicker}</p>}
+              {scene.description && <p class="scene__description">{scene.description}</p>}
+              {scene.actions.length > 0 && (
+                <div class="scene__actions">
+                  {scene.actions.map(({ label, href }, actionIndex) => (
+                    <a href={href} class:list={['button', actionIndex > 0 && 'button--outline']}>{label}</a>
+                  ))}
+                </div>
+              )}
+            </div>
+            {isOrigins && (
+              <ul class="product-grid" aria-label="Cafés Cabrales">
+                {home.products.map((product) => <SceneCard product={product} editing={editing} />)}
+              </ul>
+            )}
+          </div>
+        </section>
+      );
+    })}
+
+    <div class="journey__controls" hidden>
+      <span class="journey__hint" aria-hidden="true"><Icon name="arrowDown" size={16} /> {home.hint}</span>
+      <button class="motion-switch" type="button" data-motion-toggle>
+        <span class="motion-switch__pause"><Icon name="pause" size={18} /></span>
+        <span class="motion-switch__play"><Icon name="play" size={18} /></span>
+        <span data-motion-label>Ver sin animación</span>
+      </button>
+    </div>
+  </div>
+</cabrales-journey>
+
+<script>
+  import '../scripts/journey.ts';
+</script>

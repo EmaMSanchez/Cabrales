@@ -1,0 +1,17 @@
+---
+import type { Product } from '../lib/content.ts';
+import { editorAttributes } from '../lib/storyblok.ts';
+interface Props { product: Product; editing: boolean }
+const { product, editing } = Astro.props;
+---
+
+<li class="product-card" {...editorAttributes(product.blok, editing)}>
+  {product.image.src && (
+    <img class="product-card__image" src={product.image.src} alt={product.image.alt} width="98" height="116" loading="lazy" decoding="async" />
+  )}
+  <div class="product-card__info">
+    <h3>{product.name}</h3>
+    {product.note && <p>{product.note}</p>}
+    <a class="button button--compact" href={product.link.href} aria-label={`${product.link.label} ${product.name}`}>{product.link.label}</a>
+  </div>
+</li>

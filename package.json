@@ -1,0 +1,39 @@
+{
+  "name": "cabrales-home",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.14.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "dev:editor": "astro dev --mode editor",
+    "build": "astro build",
+    "preview": "astro preview",
+    "start": "node --env-file-if-exists=.env dist/server/entry.mjs",
+    "check": "astro check",
+    "test": "node --test tests/*.test.mjs",
+    "test:browser": "node tests/browser.mjs",
+    "media:prepare": "node scripts/prepare-media.mjs",
+    "cms:check": "node scripts/check-storyblok.mjs",
+    "cms:provision": "node scripts/provision-storyblok.mjs"
+  },
+  "dependencies": {
+    "@astrojs/node": "^11.1.14",
+    "@fontsource-variable/manrope": "^5.3.0",
+    "@fontsource/yellowtail": "^5.3.0",
+    "@storyblok/astro": "^11.0.0",
+    "astro": "^7.4.13",
+    "gsap": "^3.15.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@types/node": "^24.0.0",
+    "playwright-core": "^1.64.1",
+    "sharp": "^0.35.4",
+    "typescript": "^5.9.3",
+    "vite-plugin-mkcert": "^2.1.0"
+  }
+}

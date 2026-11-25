@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.astro/
+.netlify/
+.env
+.env.*
+!.env.example
+reports/
+*.pem
+
+# Material de referencia que no necesita la aplicación ni la preparación de sus assets.
+/Ejemplo-web-video.mp4
+/Storyboard del video + lógica de scroll@1x.png
