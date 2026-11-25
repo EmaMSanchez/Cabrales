@@ -20,7 +20,7 @@ La ruta pública `/` y la de vista previa `/cabrales-home-v2/` leen **únicament
 1. Completá `.env` a partir de `.env.example`, conservando los secretos solo en tu entorno. `STORYBLOK_PREVIEW_TOKEN` se usa para leer borradores; `STORYBLOK_SPACE_ID` identifica el Space del Visual Editor. Verificá la conexión con `npm run cms:check`.
 2. Creá el tipo de contenido **Cabrales · Home V2** y sus dos bloques anidados en el Space. Para aplicar el [modelo incluido](scripts/storyblok-model.mjs), configurá localmente `STORYBLOK_MANAGEMENT_TOKEN` con permisos sobre la Story y la Block Library. Ejecutá `npm run cms:provision` para revisar y, si coincide el borrador, `npm run cms:provision -- --apply`. El script no duplica Stories, no reemplaza un borrador con contenido y no publica. No modifica `default-page`, `hero-section` ni la Story anterior `cabrales`.
 3. En **Settings → Visual Editor**, agregá `https://localhost:4321/` como entorno **adicional** para desarrollo. En el borrador elegí ese entorno. El slug ya coincide con la ruta; si la Story tiene un Real path distinto, ajustá **solo ese borrador** a `/cabrales-home-v2/`. No reemplaces la URL global que usa el otro proyecto.
-4. Cargá los MP4 optimizados en `video_desktop` y `video_mobile`, o dejá vacíos esos campos para usar las versiones locales. Los videos en Storyblok necesitan un Space habilitado para ese tipo de asset; también podés usar un CDN HTTPS que sirva MP4 con solicitudes `Range`. Los pósters, las fotos, el logo, los textos y los enlaces se pueden configurar en los campos correspondientes. Al guardar, el editor recarga la vista en modo estático para que todas las escenas sean seleccionables. Usá «Ver con animación» dentro del editor para probar el scroll.
+4. Cargá los MP4 optimizados en `video_desktop` y `video_mobile`, o dejá vacíos esos campos para usar las versiones locales. Los videos en Storyblok necesitan un Space habilitado para ese tipo de asset; también podés usar un CDN HTTPS que sirva MP4 con solicitudes `Range`. Los pósters, las fotos, el logo, los textos y los enlaces se pueden configurar en los campos correspondientes. Al guardar, el editor recarga la vista en modo estático para que todas las escenas sean seleccionables. Probá el recorrido con scroll en la home abierta fuera del Visual Editor.
 
 El token Preview y una firma vigente habilitan el iframe del Visual Editor. No se envía ningún token a la página. Fuera del editor, el iframe está bloqueado y producción consulta `published` con `STORYBLOK_PUBLIC_TOKEN`.
 
@@ -43,6 +43,8 @@ El clip `Ejemplo-web-video.mp4` es solo referencia. Los masters de escritorio y 
 | 85–100 % | Lo que sigue en una reunión | Cuadro final fijo con desenfoque CSS |
 
 La puesta recorre un escenario fijo de `100svh` en un total de `500svh`. No se controla el gesto de scroll del navegador ni se reproduce el MP4 automáticamente. Los segundos de fin son editables por orientación, y deben ser crecientes. Si se cambia el montaje, verificá los cortes en ambos archivos y actualizá también las imágenes fijas. Con movimiento reducido, ahorro de datos, JavaScript desactivado o error del video, el recorrido se presenta como cinco paneles estáticos.
+
+Al entrar en la escena de orígenes, las tarjetas aparecen con opacidad, escala y un desplazamiento hacia los lados, sin rotación. Su entrada sigue el progreso del scroll y las tarjetas quedan visibles directamente en la vista estática.
 
 ```sh
 npm run media:prepare                # regenera los derivados a partir de los masters y el mock

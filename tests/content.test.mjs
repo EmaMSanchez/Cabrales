@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { HOME_SLUG, PRODUCT_BLOCK, SCENE_BLOCK, homeContent, safeHref } from '../src/lib/content.ts';
 import { isSignedPreview } from '../src/lib/preview.ts';
-import { DEFAULT_MARKS, SCENE_IDS, SCROLL_STOP, filmTime, sceneAt, scenePose } from '../src/lib/timeline.ts';
+import { DEFAULT_MARKS, SCENE_IDS, SCROLL_STOP, filmTime, originsCardEntry, readableStop, sceneAt, scenePose } from '../src/lib/timeline.ts';
 import { components, isEmptyDefaultDraft, seedContent } from '../scripts/storyblok-model.mjs';
 
 test('las cinco escenas y los cuatro cafés tienen fallback sin Storyblok', () => {
@@ -62,6 +62,15 @@ test('el video sigue los cinco tramos, reacciona hacia atrás y congela el últi
   assert.equal(scenePose(.2).opacity, 0);
   assert.equal(scenePose(0).opacity, 1);
   assert.equal(scenePose(.95).blur, 16);
+});
+
+test('la entrada de las tarjetas sigue el scroll y termina antes del ancla de productos', () => {
+  assert.equal(originsCardEntry(SCROLL_STOP[3]), 0);
+  const early = originsCardEntry(.68);
+  const late = originsCardEntry(.71);
+  assert.ok(0 < early && early < late && late < 1);
+  assert.equal(originsCardEntry(readableStop(3)), 1);
+  assert.equal(originsCardEntry(.68), early);
 });
 
 test('solo se habilita el Visual Editor con una firma vigente para el Space correcto', () => {

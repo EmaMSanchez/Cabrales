@@ -37,6 +37,11 @@ export function scenePose(progress: number) {
   };
 }
 
+export function originsCardEntry(progress: number) {
+  // Let the scene begin before opening the cards; #productos lands after they settle.
+  return ease((progress - SCROLL_STOP[3] - .01) / .065);
+}
+
 export function filmTime(progress: number, duration: number, marks: readonly number[] = DEFAULT_MARKS) {
   if (!(duration > 0) || !Number.isFinite(duration)) return 0;
   const time = clamp(progress);

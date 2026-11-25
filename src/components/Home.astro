@@ -15,7 +15,6 @@ const home = homeContent(delivery.block);
 <Base title={home.meta.title} description={home.meta.description} image={home.meta.image.src} canonical={delivery.canonical} indexable={delivery.indexable}>
   <div class="skip-links">
     <a href="#contenido">Ir al contenido</a>
-    <a href="#productos" data-linear-link>Ver los productos sin animación</a>
   </div>
   <Header home={home} />
   <main id="contenido" tabindex="-1" {...editorAttributes(delivery.block, delivery.editing)}>

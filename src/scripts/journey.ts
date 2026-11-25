@@ -1,11 +1,6 @@
-import { DEFAULT_MARKS, SCENE_IDS, clamp, filmTime, readableStop, scenePose, validMarks } from '../lib/timeline.ts';
+import { DEFAULT_MARKS, SCENE_IDS, clamp, filmTime, originsCardEntry, readableStop, scenePose, validMarks } from '../lib/timeline.ts';
 
-const preferenceKey = 'cabrales.motion';
 type Trigger = import('gsap/ScrollTrigger').ScrollTrigger;
-
-function preference() {
-  try { return sessionStorage.getItem(preferenceKey); } catch { return null; }
-}
 
 function markList(raw?: string) {
   try {
@@ -20,8 +15,7 @@ class CabralesJourney extends HTMLElement {
   #trigger?: Trigger;
   #video!: HTMLVideoElement;
   #stage!: HTMLElement;
-  #controls!: HTMLElement;
-  #toggle!: HTMLButtonElement;
+  #productGrid?: HTMLUListElement;
   #scenes: HTMLElement[] = [];
   #portrait!: MediaQueryList;
   #reduced = matchMedia('(prefers-reduced-motion: reduce)');
@@ -34,23 +28,18 @@ class CabralesJourney extends HTMLElement {
   #frame = 0;
   #timeout = 0;
   #generation = 0;
-  #enabledByChoice = false;
   #failed = false;
 
   connectedCallback() {
     if (this.#events) return;
     const video = this.querySelector<HTMLVideoElement>('video');
     const stage = this.querySelector<HTMLElement>('.journey__stage');
-    const controls = this.querySelector<HTMLElement>('.journey__controls');
-    const toggle = this.querySelector<HTMLButtonElement>('[data-motion-toggle]');
     this.#scenes = [...this.querySelectorAll<HTMLElement>('[data-scene]')];
-    if (!stage || !video || !controls || !toggle || this.#scenes.length !== SCENE_IDS.length) return;
+    if (!stage || !video || this.#scenes.length !== SCENE_IDS.length) return;
     this.#video = video;
     this.#stage = stage;
-    this.#controls = controls;
-    this.#toggle = toggle;
+    this.#productGrid = this.querySelector<HTMLUListElement>('.product-grid') ?? undefined;
     this.#portrait = matchMedia(this.dataset.portrait ?? '(max-aspect-ratio: 1/1)');
-    this.#enabledByChoice = !this.hasAttribute('data-editor') && preference() !== 'still';
 
     const events = this.#events = new AbortController();
     const options = { signal: events.signal };
@@ -61,13 +50,6 @@ class CabralesJourney extends HTMLElement {
     this.#reduced.addEventListener('change', updatePreference, options);
     this.#short.addEventListener('change', updatePreference, options);
     this.#connection?.addEventListener('change', updatePreference, options);
-
-    toggle.addEventListener('click', () => {
-      this.#enabledByChoice = !this.#isMotion();
-      this.#savePreference();
-      this.#syncMode(true);
-      if (!this.#isMotion() && this.#active >= 0) this.#focus(this.#scenes[this.#active]);
-    }, options);
 
     video.addEventListener('loadedmetadata', () => this.#syncVideo(this.#progress), options);
     video.addEventListener('loadeddata', () => this.#onDecoded(), options);
@@ -95,20 +77,15 @@ class CabralesJourney extends HTMLElement {
     this.#stopMotion();
   }
 
-  #savePreference() {
-    try {
-      if (!this.hasAttribute('data-editor')) sessionStorage.setItem(preferenceKey, this.#enabledByChoice ? 'motion' : 'still');
-    } catch { /* The controls still work in the current page. */ }
-  }
-
   #available() {
-    return !this.#reduced.matches && !this.#short.matches && !this.#connection?.saveData && !this.#failed;
+    return !this.hasAttribute('data-editor') && !this.#reduced.matches && !this.#short.matches &&
+      !this.#connection?.saveData && !this.#failed;
   }
 
   #isMotion() { return this.dataset.mode === 'motion'; }
 
   #syncMode(align: boolean) {
-    const shouldAnimate = this.#available() && this.#enabledByChoice;
+    const shouldAnimate = this.#available();
     if (shouldAnimate && !this.#isMotion()) {
       const current = align ? this.#chapterInView() : undefined;
       void this.#startMotion(current);
@@ -120,9 +97,6 @@ class CabralesJourney extends HTMLElement {
     } else if (!this.dataset.mode) {
       this.dataset.mode = 'static';
     }
-    this.#controls.hidden = !this.#available();
-    const label = this.#toggle.querySelector('[data-motion-label]');
-    if (label) label.textContent = this.#isMotion() ? 'Ver sin animación' : 'Ver con animación';
   }
 
   async #startMotion(current?: number) {
@@ -173,6 +147,7 @@ class CabralesJourney extends HTMLElement {
       panel.removeAttribute('aria-hidden');
       delete panel.dataset.active;
     }
+    if (this.#productGrid) this.#productGrid.inert = false;
   }
 
   #fallback() {
@@ -222,6 +197,12 @@ class CabralesJourney extends HTMLElement {
     if (pose.index === 3) {
       const count = active.querySelectorAll('.scene__word').length;
       active.style.setProperty('--words', String(clamp((progress - .657) / .063) * (count + .65)));
+      if (this.#productGrid) {
+        const entry = originsCardEntry(progress);
+        this.#productGrid.style.setProperty('--cards-entry', entry.toFixed(4));
+        // Keep links out of pointer and keyboard navigation until the cards are readable.
+        this.#productGrid.inert = entry < .8;
+      }
     }
     this.#syncVideo(progress);
   }
@@ -287,19 +268,12 @@ class CabralesJourney extends HTMLElement {
   }
 
   #onLink(event: MouseEvent) {
-    if (event.defaultPrevented || event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey ||
+    if (!this.#isMotion() || event.defaultPrevented || event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey ||
         !(event.target instanceof Element)) return;
     const link = event.target.closest<HTMLAnchorElement>('a[href^="#"]');
     const hash = link?.getAttribute('href');
     if (!link || !hash || !/^#[a-z][\w-]*$/.test(hash) || !document.getElementById(hash.slice(1))) return;
-    if (!this.#isMotion() && !link.hasAttribute('data-linear-link')) return;
-
     event.preventDefault();
-    if (link.hasAttribute('data-linear-link')) {
-      this.#enabledByChoice = false;
-      this.#savePreference();
-      this.#syncMode(false);
-    }
     if (location.hash !== hash) history.pushState(null, '', hash);
     this.#jump(hash.slice(1), event.detail === 0);
   }

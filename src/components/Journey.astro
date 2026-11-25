@@ -73,13 +73,8 @@ const { home, editing } = Astro.props;
       );
     })}
 
-    <div class="journey__controls" hidden>
-      <span class="journey__hint" aria-hidden="true"><Icon name="arrowDown" size={16} /> {home.hint}</span>
-      <button class="motion-switch" type="button" data-motion-toggle>
-        <span class="motion-switch__pause"><Icon name="pause" size={18} /></span>
-        <span class="motion-switch__play"><Icon name="play" size={18} /></span>
-        <span data-motion-label>Ver sin animación</span>
-      </button>
+    <div class="journey__cue" aria-hidden="true">
+      <span class="journey__hint"><Icon name="arrowDown" size={16} /> {home.hint}</span>
     </div>
   </div>
 </cabrales-journey>

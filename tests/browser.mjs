@@ -65,6 +65,19 @@ async function noOverflow(page) {
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
 }
 
+async function cardPoses(page) {
+  return page.locator('.product-card').evaluateAll((cards) => cards.map((card) => {
+    const style = getComputedStyle(card);
+    const matrix = style.transform === 'none' ? new DOMMatrix() : new DOMMatrix(style.transform);
+    const { top, bottom } = card.getBoundingClientRect();
+    return {
+      top, bottom, opacity: Number(style.opacity), scale: matrix.a, offsetX: matrix.e,
+      upright: Math.abs(matrix.b) < .0001 && Math.abs(matrix.c) < .0001,
+      interactive: !card.closest('[inert]'),
+    };
+  }));
+}
+
 async function screenshot(page, id) {
   if (!capture) return;
   await mkdir('reports/screenshots', { recursive: true });
@@ -74,17 +87,32 @@ async function screenshot(page, id) {
 try {
   const desk = await pageFor({ viewport: { width: 1440, height: 900 } });
   const deskVideo = videoRequests(desk);
+  // The removed opt-out must no longer affect visitors who had previously used it.
+  await desk.addInitScript(() => sessionStorage.setItem('cabrales.motion', 'still'));
   const response = await open(desk);
   assert.equal(response.headers()['content-security-policy'], "frame-ancestors 'none'");
   assert.equal(await desk.locator('storyblok-preview').count(), 0);
   assert.equal(await desk.locator('[data-blok-uid]').count(), 0);
+  assert.equal(await desk.locator('[data-motion-toggle], .motion-switch, [data-linear-link]').count(), 0);
   await scene(desk, 0, 'cafe');
   await screenshot(desk, 'desktop-inicio');
   const grind = await scene(desk, .31, 'molido');
   const bag = await scene(desk, .575, 'super');
   await screenshot(desk, 'desktop-super');
+
+  await scene(desk, .68, 'origenes');
+  const entering = await cardPoses(desk);
+  assert.equal(entering.length, 4);
+  assert.ok(entering.every(({ opacity, scale, upright, interactive }) => opacity > 0 && opacity < .7 && scale < 1 && upright && !interactive));
+  assert.ok(entering.every(({ offsetX }, index) => index < 2 ? offsetX > 0 : offsetX < 0));
   const family = await scene(desk, .765, 'origenes');
-  assert.equal(await desk.locator('.product-card').count(), 4);
+  const settled = await cardPoses(desk);
+  assert.ok(settled.every(({ opacity, scale, offsetX, upright, interactive }) => opacity === 1 && scale === 1 && offsetX === 0 && upright && interactive));
+  assert.ok(settled[0].top + 24 < settled[1].top && settled[3].top + 24 < settled[2].top);
+  assert.ok(Math.max(...settled.map(({ bottom }) => bottom)) < 750, 'las tarjetas quedan por encima de la base visual del Súper');
+  await scene(desk, .68, 'origenes');
+  assert.deepEqual(await cardPoses(desk), entering, 'la entrada de las tarjetas también se revierte al subir');
+
   const final = await scene(desk, .929, 'reunion');
   assert.ok(grind < bag && bag < family && family < final);
   await screenshot(desk, 'desktop-reunion');
@@ -95,16 +123,11 @@ try {
   await desk.locator('.scene--cafe a[href="#productos"]').click();
   await desk.waitForFunction(() => document.querySelector('cabrales-journey').dataset.chapter === 'origenes');
   assert.equal(new URL(desk.url()).hash, '#productos');
+  assert.ok((await cardPoses(desk)).every(({ opacity, interactive }) => opacity === 1 && interactive));
   await screenshot(desk, 'desktop-origenes');
-  await desk.getByRole('button', { name: 'Ver sin animación' }).click();
-  await desk.waitForFunction(() => document.querySelector('cabrales-journey').dataset.mode === 'static');
-  assert.equal(await desk.locator('.scene[inert]').count(), 0);
-  assert.equal(await desk.locator('video').getAttribute('src'), null);
-  assert.ok(Math.abs(await desk.locator('#productos').evaluate((el) => el.getBoundingClientRect().top)) < 4);
   await desk.keyboard.press('End');
   await desk.locator('.site-footer__up').click();
   assert.equal(new URL(desk.url()).hash, '#inicio');
-  await desk.getByRole('button', { name: 'Ver con animación' }).click();
   await scene(desk, 0, 'cafe');
   await noOverflow(desk);
   await checkSource(desk, deskVideo, 'desktop');
@@ -123,6 +146,8 @@ try {
   await mobile.locator('.site-menu__nav a[href="#productos"]').tap();
   assert.equal(await mobile.locator('.site-menu').getAttribute('open'), null);
   assert.equal(await mobile.locator('cabrales-journey').getAttribute('data-chapter'), 'origenes');
+  await scene(mobile, .68, 'origenes');
+  assert.ok((await cardPoses(mobile)).every(({ scale, upright, offsetX }, index) => scale < 1 && upright && (index % 2 === 0 ? offsetX > 0 : offsetX < 0)));
   await scene(mobile, .765, 'origenes');
   await noOverflow(mobile);
   for (const card of await mobile.locator('.product-card').all()) {
@@ -151,6 +176,7 @@ try {
     await fallback.locator('#productos h2').scrollIntoViewIfNeeded();
     assert.equal(await fallback.locator('.scene[inert]').count(), 0, name);
     assert.equal(await fallback.locator('video').getAttribute('src'), null, name);
+    assert.ok((await cardPoses(fallback)).every(({ opacity, upright, interactive }) => opacity === 1 && upright && interactive), name);
     assert.deepEqual([...paths], [], name);
     await fallback.close();
   }
@@ -178,7 +204,7 @@ try {
   assert.equal(await deep.getByRole('link', { name: 'Ir al inicio' }).getAttribute('href'), '/');
   await deep.close();
   assert.deepEqual(errors, []);
-  console.log(`${engine}: navegación, encuadres, scroll reversible, cuadro final, enlaces y fallbacks OK.`);
+  console.log(`${engine}: navegación, encuadres, tarjetas, scroll reversible, cuadro final y fallbacks OK.`);
 } finally {
   await browser.close();
 }
