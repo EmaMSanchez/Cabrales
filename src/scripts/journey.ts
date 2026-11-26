@@ -14,6 +14,11 @@ class CabralesJourney extends HTMLElement {
   #events?: AbortController;
   #trigger?: Trigger;
   #video!: HTMLVideoElement;
+  #loop!: HTMLVideoElement;
+  #loopSource = '';
+  #loopActive = false;
+  #loopFailed = false;
+  #loopAttempt = 0;
   #stage!: HTMLElement;
   #productGrid?: HTMLUListElement;
   #scenes: HTMLElement[] = [];
@@ -32,11 +37,13 @@ class CabralesJourney extends HTMLElement {
 
   connectedCallback() {
     if (this.#events) return;
-    const video = this.querySelector<HTMLVideoElement>('video');
+    const video = this.querySelector<HTMLVideoElement>('.journey__video');
+    const loop = this.querySelector<HTMLVideoElement>('.journey__loop');
     const stage = this.querySelector<HTMLElement>('.journey__stage');
     this.#scenes = [...this.querySelectorAll<HTMLElement>('[data-scene]')];
-    if (!stage || !video || this.#scenes.length !== SCENE_IDS.length) return;
+    if (!stage || !video || !loop || this.#scenes.length !== SCENE_IDS.length) return;
     this.#video = video;
+    this.#loop = loop;
     this.#stage = stage;
     this.#productGrid = this.querySelector<HTMLUListElement>('.product-grid') ?? undefined;
     this.#portrait = matchMedia(this.dataset.portrait ?? '(max-aspect-ratio: 1/1)');
@@ -55,6 +62,13 @@ class CabralesJourney extends HTMLElement {
     video.addEventListener('loadeddata', () => this.#onDecoded(), options);
     video.addEventListener('seeked', () => this.#onDecoded(), options);
     video.addEventListener('error', () => { if (this.#isMotion()) this.#fallback(); }, options);
+    loop.addEventListener('playing', () => {
+      if (this.#loopActive) this.dataset.loopVisible = '';
+    }, options);
+    loop.addEventListener('error', () => {
+      if (this.#isMotion() && loop.hasAttribute('src')) this.#disableLoop();
+    }, options);
+    document.addEventListener('visibilitychange', () => this.#syncLoop(), options);
 
     document.addEventListener('click', (event) => this.#onLink(event), options);
     window.addEventListener('hashchange', () => {
@@ -137,6 +151,8 @@ class CabralesJourney extends HTMLElement {
     cancelAnimationFrame(this.#frame);
     this.#frame = 0;
     clearTimeout(this.#timeout);
+    this.#timeout = 0;
+    this.#resetLoop();
     if (this.#video?.hasAttribute('src')) {
       this.#video.removeAttribute('src');
       this.#video.preload = 'none';
@@ -160,18 +176,75 @@ class CabralesJourney extends HTMLElement {
     this.#marks = markList(this.dataset[key === 'mobile' ? 'mobileMarks' : 'desktopMarks']);
     const source = this.dataset[key];
     if (!source || !this.#video.canPlayType('video/mp4')) { this.#fallback(); return; }
-    if (this.#video.getAttribute('src') === source) return;
+    const loop = key === 'mobile' ? this.dataset.mobileLoop ?? '' : '';
+    if (loop !== this.#loopSource) this.#resetLoop(loop);
+    if (this.#video.getAttribute('src') !== source) {
+      delete this.dataset.frameReady;
+      cancelAnimationFrame(this.#frame);
+      this.#frame = 0;
+      clearTimeout(this.#timeout);
+      this.#timeout = 0;
+      this.#video.preload = loop && this.#progress === 0 ? 'metadata' : 'auto';
+      this.#video.src = source;
+      this.#video.load();
+    }
+    this.#syncLoop();
+    this.#syncVideo(this.#progress);
+  }
 
-    delete this.dataset.frameReady;
-    cancelAnimationFrame(this.#frame);
-    this.#frame = 0;
-    clearTimeout(this.#timeout);
-    this.#timeout = window.setTimeout(() => {
-      if (!this.hasAttribute('data-frame-ready')) this.#fallback();
-    }, 14000);
-    this.#video.preload = 'auto';
-    this.#video.src = source;
-    this.#video.load();
+  #resetLoop(source = '') {
+    ++this.#loopAttempt;
+    this.#loopSource = source;
+    this.#loopFailed = false;
+    this.#loopActive = false;
+    delete this.dataset.loopVisible;
+    if (this.#loop?.hasAttribute('src')) {
+      this.#loop.pause();
+      this.#loop.removeAttribute('src');
+      this.#loop.load();
+    }
+  }
+
+  #disableLoop() {
+    this.#loopFailed = true;
+    delete this.dataset.loopVisible;
+    this.#syncLoop();
+  }
+
+  #syncLoop() {
+    if (!this.#isMotion()) return;
+    const atTop = this.#progress === 0;
+    const available = Boolean(this.#loopSource) && !this.#loopFailed;
+    const play = atTop && available && !document.hidden;
+    if (play !== this.#loopActive) {
+      this.#loopActive = play;
+      const attempt = ++this.#loopAttempt;
+      if (play) {
+        if (!this.#loop.hasAttribute('src')) this.#loop.src = this.#loopSource;
+        else if (this.#loop.readyState >= 1 && !this.hasAttribute('data-loop-visible')) this.#loop.currentTime = 0;
+        void this.#loop.play().catch(() => {
+          if (this.#loopAttempt === attempt) this.#disableLoop();
+        });
+      } else {
+        // Hold the last painted loop frame until the scroll clip has decoded its target.
+        this.#loop.pause();
+      }
+    }
+    if (!atTop || !available) this.#requireFilm();
+    else if (this.#timeout) {
+      clearTimeout(this.#timeout);
+      this.#timeout = 0;
+    }
+  }
+
+  #requireFilm() {
+    if (!this.#video.hasAttribute('src')) return;
+    if (this.#video.preload !== 'auto') this.#video.preload = 'auto';
+    if (!this.#timeout && !this.hasAttribute('data-frame-ready')) {
+      this.#timeout = window.setTimeout(() => {
+        if (!this.hasAttribute('data-frame-ready')) this.#fallback();
+      }, 14000);
+    }
   }
 
   #render(progress: number) {
@@ -204,6 +277,7 @@ class CabralesJourney extends HTMLElement {
         this.#productGrid.inert = entry < .8;
       }
     }
+    this.#syncLoop();
     this.#syncVideo(progress);
   }
 
@@ -230,11 +304,13 @@ class CabralesJourney extends HTMLElement {
   }
 
   #showFrame() {
-    if (!this.hasAttribute('data-frame-ready') && this.#video.readyState >= 2 &&
-        !this.#video.seeking && Math.abs(this.#video.currentTime - this.#target) < .09) {
+    if (this.#video.readyState < 2 || this.#video.seeking || Math.abs(this.#video.currentTime - this.#target) >= .09) return;
+    if (!this.hasAttribute('data-frame-ready')) {
       clearTimeout(this.#timeout);
+      this.#timeout = 0;
       this.dataset.frameReady = '';
     }
+    if (this.#progress > 0) delete this.dataset.loopVisible;
   }
 
   #distance() { return Math.max(1, this.offsetHeight - this.#stage.offsetHeight); }

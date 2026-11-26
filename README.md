@@ -32,7 +32,9 @@ El token Preview y una firma vigente habilitan el iframe del Visual Editor. No s
 
 ## Video y sincronización
 
-El clip `Ejemplo-web-video.mp4` es solo referencia. Los masters de escritorio y móvil, de 22,542 s, quedan intactos. `public/media/` contiene derivados H.264 sin audio, con `faststart` y un cuadro clave por fotograma. Escritorio usa 1440 × 810; móvil usa 720 × 1280 (5,9 MB). El frontend elige según la orientación de la ventana y no carga el otro video. El primer póster se solicita antes que el video.
+El clip `Ejemplo-web-video.mp4` es solo referencia. Los masters de escritorio y móvil, de 22,542 s, quedan intactos. Los videos de scroll en `public/media/` son derivados H.264 sin audio, con `faststart` y un cuadro clave por fotograma. Escritorio usa 1440 × 810; móvil usa 720 × 1280 (5,9 MB). El frontend elige según la orientación de la ventana y no carga los videos de la otra orientación. El primer póster se solicita antes que el video.
+
+En escritorio, el primer cuadro queda quieto hasta que empieza el scroll. En móvil, arriba de todo se reproduce un loop silencioso (0,78 MB). Al empezar a bajar, se congela el cuadro visible del loop hasta que el montaje de scroll decodifica el suyo; luego se funden brevemente las dos capas. Al volver arriba se reactiva el loop desde el inicio. Un montaje móvil reemplazado en Storyblok no se empalma con el loop local.
 
 Para probar un archivo de escritorio alternativo sin regenerar los pósteres ni el video móvil, pasá su ruta a `--solo-video-desktop`. Usá el mismo montaje y duración (541 fotogramas a 24 fps) para conservar los puntos de entrada de las escenas.
 
@@ -44,12 +46,13 @@ Para probar un archivo de escritorio alternativo sin regenerar los pósteres ni 
 | 65–85 % | Un origen para cada taza | 18,125–22,500 s |
 | 85–100 % | Lo que sigue en una reunión | Cuadro final fijo con desenfoque CSS |
 
-La puesta recorre un escenario fijo de `100svh` en un total de `500svh`. No se controla el gesto de scroll del navegador ni se reproduce el MP4 automáticamente. Los segundos de fin son editables por orientación, y deben ser crecientes. Si se cambia el montaje, verificá los cortes en ambos archivos y actualizá también las imágenes fijas. Con movimiento reducido, ahorro de datos, JavaScript desactivado o error del video, el recorrido se presenta como cinco paneles estáticos.
+La puesta recorre un escenario fijo de `100svh` en un total de `500svh`. No se intercepta el gesto del navegador ni se reproduce automáticamente el video de scroll. Los segundos de fin son editables por orientación, y deben ser crecientes. Si se cambia el montaje, verificá los cortes en ambos archivos y actualizá también las imágenes fijas. Con movimiento reducido, ahorro de datos, JavaScript desactivado o error del video de scroll, el recorrido se presenta como cinco paneles estáticos. Si solo falla el loop, el video de scroll sigue disponible.
 
 Al entrar en la escena de orígenes, las tarjetas aparecen con opacidad, escala y un desplazamiento hacia los lados, sin rotación. Su entrada sigue el progreso del scroll y las tarjetas quedan visibles directamente en la vista estática.
 
 ```sh
 npm run media:prepare                # regenera los derivados a partir de los masters y el mock
+npm run media:prepare -- --solo-loop-movil # regenera solo el MP4 de entrada en móvil
 npm run media:prepare -- --solo-video-desktop ./video-cabrales-1440x810.mp4 # prueba otro MP4 de escritorio
 npm run media:prepare -- --inspeccion   # genera hojas de fotogramas en reports/media/
 ```

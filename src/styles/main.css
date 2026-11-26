@@ -179,14 +179,15 @@ p { text-wrap: pretty; }
   display: none;
   pointer-events: none;
 }
-.journey__video, .scene__still img {
+.journey__video, .journey__loop, .scene__still img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: var(--movie-position);
 }
+.journey__video, .journey__intro, .journey__loop { position: absolute; inset: 0; }
+.journey__video, .journey__intro { opacity: 0; }
 .journey__video {
-  opacity: 0;
   filter: blur(var(--film-blur, 0px));
   transform: scale(var(--film-scale, 1));
 }
@@ -194,7 +195,19 @@ p { text-wrap: pretty; }
 .journey[data-mode='motion'] .journey__stage { position: sticky; top: 0; height: 100svh; isolation: isolate; }
 .journey[data-mode='motion'] .journey__backdrop { display: block; }
 .journey[data-frame-ready] .journey__video { opacity: 1; }
-.journey[data-mode='motion'][data-frame-ready] .scene__still { opacity: 0; }
+.journey[data-frame-ready] .journey__intro { transition: opacity .18s var(--ease); }
+.journey[data-loop-visible] .journey__intro { opacity: 1; }
+.journey[data-mode='motion']:is([data-frame-ready], [data-loop-visible]) .scene__still { opacity: 0; }
+
+@media (max-aspect-ratio: 1/1) {
+  /* Match the portrait clip's backdrop where falling beans pass behind the copy. */
+  .journey__intro::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(#f0e8dc max(45%, 24rem), #f0e8dc00 max(58%, 26rem));
+  }
+}
 
 .scene {
   min-height: var(--frame-size);

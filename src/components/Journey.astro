@@ -12,6 +12,7 @@ const { home, editing } = Astro.props;
   data-portrait={PORTRAIT_QUERY}
   data-desktop={home.film.desktop}
   data-mobile={home.film.mobile}
+  data-mobile-loop={home.film.mobileLoop}
   data-desktop-marks={JSON.stringify(home.film.desktopMarks)}
   data-mobile-marks={JSON.stringify(home.film.mobileMarks)}
   data-editor={editing ? '' : undefined}
@@ -19,6 +20,9 @@ const { home, editing } = Astro.props;
   <div class="journey__stage">
     <div class="journey__backdrop" aria-hidden="true">
       <video class="journey__video" muted playsinline preload="none" tabindex="-1" disablepictureinpicture></video>
+      <div class="journey__intro">
+        <video class="journey__loop" muted playsinline loop preload="none" tabindex="-1" disablepictureinpicture></video>
+      </div>
     </div>
 
     {home.scenes.map((scene, index) => {

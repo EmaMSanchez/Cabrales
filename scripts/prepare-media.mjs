@@ -12,6 +12,7 @@ const films = {
   desktop: { input: 'video-cabrales-home-scroll-web.mp4', width: 1440, crf: 27, posters: [0, 7.5, 15.5, 21.75, 22.5] },
   mobile: { input: 'video-cabrales-home-scroll-mobile.mp4', width: 720, crf: 29, posters: [0, 7.5, 15.5, 21.75, 22.5] },
 };
+const mobileLoop = { input: 'loop-cafe-mobile-1080x1920.mp4', frames: 100, dissolve: 11, crf: 25 };
 const motionFrames = ['cafe', 'molido', 'super', 'origenes', 'reunion'];
 
 function run(args, pipe = false) {
@@ -40,6 +41,23 @@ async function encodeFilm(variant, film) {
     '-c:v', 'libx264', '-preset', 'slow', '-crf', String(film.crf),
     '-pix_fmt', 'yuv420p', '-g', '1', '-bf', '0', '-movflags', '+faststart',
     path.join(out, `cabrales-scroll-${variant}.mp4`),
+  ]);
+}
+
+async function encodeMobileLoop({ input, frames, dissolve, crf }) {
+  // Preserve frame zero for the scroll handoff. Close the loop before the grinder
+  // visibly fills or spills, gently blending back to the opening composition.
+  const mix = `clip((N-${frames - dissolve})/${dissolve - 1},0,1)`;
+  const filter = [
+    `[0:v]scale=${films.mobile.width}:-2:flags=lanczos,setsar=1,split[clip][opening]`,
+    `[clip]trim=end_frame=${frames},setpts=PTS-STARTPTS[body]`,
+    '[opening]trim=end_frame=1,setpts=PTS-STARTPTS,loop=-1:1:0[still]',
+    `[body][still]blend=all_expr='A*(1-${mix})+B*${mix}':shortest=1[out]`,
+  ].join(';');
+  await run([
+    '-y', '-i', input, '-filter_complex', filter, '-map', '[out]', '-an', '-frames:v', String(frames),
+    '-c:v', 'libx264', '-preset', 'slow', '-crf', String(crf), '-pix_fmt', 'yuv420p',
+    '-g', '48', '-movflags', '+faststart', path.join(out, 'cabrales-loop-mobile.mp4'),
   ]);
 }
 
@@ -75,6 +93,11 @@ async function productCrops() {
 }
 
 await mkdir(out, { recursive: true });
+
+if (process.argv.includes('--solo-loop-movil')) {
+  await encodeMobileLoop(mobileLoop);
+  process.exit(0);
+}
 
 const desktopVideoOption = process.argv.indexOf('--solo-video-desktop');
 if (desktopVideoOption !== -1) {

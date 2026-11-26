@@ -13,6 +13,7 @@ test('las cinco escenas y los cuatro cafés tienen fallback sin Storyblok', () =
   assert.deepEqual(baseline.products.map(({ name }) => name), ['Brasil', 'Colombia', 'Perú', 'Prestige']);
   assert.deepEqual(homeContent({ component: 'default-page', meta_title: 'Otra Story' }), baseline);
   assert.deepEqual(baseline.film.desktopMarks, [...DEFAULT_MARKS]);
+  assert.equal(baseline.film.mobileLoop, '/media/cabrales-loop-mobile.mp4');
   assert.equal(baseline.scenes.at(-1).actions[0].label, 'Agendar reunión');
 });
 
@@ -35,6 +36,9 @@ test('Storyblok puede cambiar el texto, la foto, los enlaces y los dos montajes 
   assert.equal(home.products[0].image.alt, 'Una foto');
   assert.equal(home.film.desktop, 'https://a.storyblok.com/video.mp4');
   assert.equal(home.film.mobile, '/media/cabrales-scroll-mobile.mp4');
+  assert.equal(home.film.mobileLoop, '/media/cabrales-loop-mobile.mp4');
+  const otherMobile = homeContent({ component: HOME_SLUG, video_mobile: '/media/alternativo.mp4' });
+  assert.equal(otherMobile.film.mobileLoop, undefined, 'no se empalma un clip editorial con el loop local');
   assert.equal(home.film.desktopMarks[1], 3.15);
   // Reject a descending list of times rather than desynchronizing a chapter.
   const invalid = homeContent({ component: HOME_SLUG, scenes: [{ component: SCENE_BLOCK, scene_key: 'cafe', end_desktop: '13' }] });
@@ -122,28 +126,38 @@ function mp4Boxes(bytes, from = 0, until = bytes.length) {
   return list;
 }
 
+function assertSilentVideo(result, width, height, frames) {
+  const root = mp4Boxes(result);
+  const get = (parent, type) => mp4Boxes(result, parent.from, parent.until).find((box) => box.type === type);
+  const movie = root.find((box) => box.type === 'moov');
+  assert.ok(movie && movie.until < root.find((box) => box.type === 'mdat').from, 'faststart');
+  assert.equal(mp4Boxes(result, movie.from, movie.until).filter((item) => item.type === 'trak').length, 1, 'sin audio');
+  const track = get(movie, 'trak'), header = get(track, 'tkhd');
+  assert.equal(result.readUInt32BE(header.until - 8) / 65536, width);
+  assert.equal(result.readUInt32BE(header.until - 4) / 65536, height);
+  const samples = get(get(get(track, 'mdia'), 'minf'), 'stbl');
+  const timeTable = get(samples, 'stts');
+  const clock = get(get(track, 'mdia'), 'mdhd');
+  const ticks = result.readUInt32BE(clock.from + 12);
+  assert.equal(result.readUInt32BE(timeTable.from + 8), frames);
+  assert.equal(ticks / result.readUInt32BE(timeTable.from + 12), 24);
+  return get(samples, 'stss');
+}
+
 test('cada variante es más liviana que su original, arranca por HTTP y conserva el montaje all-intra', async () => {
-  for (const [target, master, expectedWidth, expectedHeight, maxRatio] of [
+  for (const [target, master, width, height, maxRatio] of [
     ['desktop', 'web', 1440, 810, .85], ['mobile', 'mobile', 720, 1280, .7],
   ]) {
     const source = await readFile(new URL(`../video-cabrales-home-scroll-${master}.mp4`, import.meta.url));
     const result = await readFile(new URL(`../public/media/cabrales-scroll-${target}.mp4`, import.meta.url));
     assert.ok(result.length < source.length * maxRatio, `${target} supera su presupuesto de peso`);
-    const root = mp4Boxes(result);
-    const get = (parent, type) => mp4Boxes(result, parent.from, parent.until).find((box) => box.type === type);
-    const movie = root.find((box) => box.type === 'moov');
-    assert.ok(movie && movie.until < root.find((box) => box.type === 'mdat').from, 'faststart');
-    assert.equal(mp4Boxes(result, movie.from, movie.until).filter((item) => item.type === 'trak').length, 1, 'sin audio');
-    const track = get(movie, 'trak'), header = get(track, 'tkhd');
-    assert.equal(result.readUInt32BE(header.until - 8) / 65536, expectedWidth);
-    assert.equal(result.readUInt32BE(header.until - 4) / 65536, expectedHeight);
-    const samples = get(get(get(track, 'mdia'), 'minf'), 'stbl');
-    const timeTable = get(samples, 'stts');
-    const clock = get(get(track, 'mdia'), 'mdhd');
-    const ticks = result.readUInt32BE(clock.from + 12);
-    assert.equal(result.readUInt32BE(timeTable.from + 8), 541);
-    assert.equal(ticks / result.readUInt32BE(timeTable.from + 12), 24);
-    const sync = get(samples, 'stss');
+    const sync = assertSilentVideo(result, width, height, 541);
     if (sync) assert.equal(result.readUInt32BE(sync.from + 4), 541);
   }
+});
+
+test('el loop móvil es liviano, silencioso y mantiene el encuadre de su montaje', async () => {
+  const result = await readFile(new URL('../public/media/cabrales-loop-mobile.mp4', import.meta.url));
+  assert.ok(result.length < 1_000_000, 'el loop móvil supera su presupuesto de peso');
+  assertSilentVideo(result, 720, 1280, 100);
 });

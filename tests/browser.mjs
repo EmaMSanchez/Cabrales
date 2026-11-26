@@ -33,32 +33,52 @@ async function scene(page, progress, chapter) {
     const travel = journey.offsetHeight - journey.querySelector('.journey__stage').offsetHeight;
     window.scrollTo(0, Math.round(start + travel * p));
   }, progress);
-  await page.waitForFunction(({ expected, chapter }) => {
+  await page.waitForFunction(({ expected, chapter, flowing }) => {
     const journey = document.querySelector('cabrales-journey');
-    const video = journey.querySelector('video');
+    const video = journey.querySelector('.journey__video');
     return journey.hasAttribute('data-frame-ready') && journey.dataset.chapter === chapter &&
+      (!flowing || !journey.hasAttribute('data-loop-visible')) &&
       !video.seeking && Math.abs(video.currentTime - expected) < .13;
-  }, { expected, chapter });
+  }, { expected, chapter, flowing: progress > 0 });
   assert.equal(await page.locator('.scene[data-active]').count(), 1);
   assert.equal(await page.locator('.scene[inert]').count(), 4);
-  assert.equal(await page.locator('video').evaluate((v) => v.paused), true);
-  return page.locator('video').evaluate((v) => v.currentTime);
+  const film = page.locator('.journey__video');
+  assert.equal(await film.evaluate((v) => v.paused), true);
+  if (progress > 0) {
+    assert.equal(await page.locator('.journey__loop').evaluate((v) => v.paused), true);
+    assert.equal(await page.locator('cabrales-journey').getAttribute('data-loop-visible'), null);
+  }
+  return film.evaluate((v) => v.currentTime);
+}
+
+async function intro(page) {
+  await page.waitForFunction(() => {
+    const journey = document.querySelector('cabrales-journey');
+    const loop = journey.querySelector('.journey__loop');
+    return journey.hasAttribute('data-loop-visible') && !loop.paused && loop.currentTime > .04;
+  });
+  const loop = page.locator('.journey__loop');
+  assert.equal(await loop.evaluate((video) => new URL(video.currentSrc).pathname), '/media/cabrales-loop-mobile.mp4');
+  assert.equal(await loop.evaluate((video) => video.muted && video.loop && video.playsInline), true);
 }
 
 function videoRequests(page) {
   const paths = new Set();
   page.on('request', (request) => {
     const { pathname } = new URL(request.url());
-    if (pathname.includes('/media/cabrales-scroll-')) paths.add(pathname);
+    if (/^\/media\/cabrales-(scroll|loop)-/.test(pathname)) paths.add(pathname);
   });
   return paths;
 }
 
 async function checkSource(page, paths, variant) {
-  const expected = `/media/cabrales-scroll-${variant}.mp4`;
-  assert.equal(await page.locator('video').evaluate((video) => new URL(video.currentSrc).pathname), expected);
+  const film = `/media/cabrales-scroll-${variant}.mp4`;
+  assert.equal(await page.locator('.journey__video').evaluate((video) => new URL(video.currentSrc).pathname), film);
+  const expected = new Set([film]);
+  if (variant === 'mobile') expected.add('/media/cabrales-loop-mobile.mp4');
+  else assert.equal(await page.locator('.journey__loop').getAttribute('src'), null);
   // WebKit on Windows fetches the video through its native media pipeline, outside Playwright's network events.
-  if (engine === 'chromium' || paths.size) assert.deepEqual([...paths], [expected]);
+  if (engine === 'chromium' || paths.size) assert.deepEqual(paths, expected);
 }
 
 async function noOverflow(page) {
@@ -121,12 +141,14 @@ try {
   assert.equal(await desk.locator('[data-blok-uid]').count(), 0);
   assert.equal(await desk.locator('[data-motion-toggle], .motion-switch, [data-linear-link]').count(), 0);
   await scene(desk, 0, 'cafe');
+  assert.equal(await desk.locator('cabrales-journey').getAttribute('data-loop-visible'), null);
   const heading = desk.getByRole('heading', { level: 1, name: 'Café Cabrales', exact: true });
   assert.match(await heading.textContent(), /Café\s+Cabrales/);
   assert.equal(await heading.locator('img, svg').count(), 0);
   const { x: heroMargin } = await desk.locator('#inicio .scene__copy').boundingBox();
   assert.equal(await primaryActionOffset(desk, 'inicio'), -8);
   await screenshot(desk, 'desktop-inicio');
+  await scene(desk, .025, 'cafe');
   const grind = await scene(desk, .31, 'molido');
   await checkMolidoTitle(desk);
   const { x, width } = await desk.locator('#molido .scene__copy').boundingBox();
@@ -177,7 +199,7 @@ try {
   });
   const mobVideo = videoRequests(mobile);
   await open(mobile, '/cabrales-home-v2');
-  await scene(mobile, 0, 'cafe');
+  await intro(mobile);
   assert.equal(await mobile.locator('#inicio picture img').evaluate((i) => new URL(i.currentSrc).pathname), '/media/cafe-mobile.webp');
   assert.equal(await primaryActionOffset(mobile, 'inicio'), -4);
   await screenshot(mobile, 'movil-inicio');
@@ -200,6 +222,8 @@ try {
   await checkMolidoTitle(mobile);
   await noOverflow(mobile);
   await screenshot(mobile, 'movil-molido');
+  await scene(mobile, 0, 'cafe');
+  await intro(mobile);
   await checkSource(mobile, mobVideo, 'mobile');
   await mobile.close();
 
@@ -218,7 +242,7 @@ try {
     await open(fallback, '/#productos');
     await fallback.locator('#productos h2').scrollIntoViewIfNeeded();
     assert.equal(await fallback.locator('.scene[inert]').count(), 0, name);
-    assert.equal(await fallback.locator('video').getAttribute('src'), null, name);
+    assert.equal(await fallback.locator('video[src]').count(), 0, name);
     assert.ok((await cardPoses(fallback)).every(({ opacity, upright, interactive }) => opacity === 1 && upright && interactive), name);
     assert.deepEqual([...paths], [], name);
     await fallback.close();
@@ -236,12 +260,46 @@ try {
   await open(failed);
   await failed.waitForFunction(() => document.querySelector('cabrales-journey').dataset.mode === 'static');
   assert.equal(await failed.locator('.scene[inert]').count(), 0);
-  assert.equal(await failed.locator('video').getAttribute('src'), null);
+  assert.equal(await failed.locator('video[src]').count(), 0);
   await failed.close();
 
-  const deep = await pageFor();
+  const blocked = await pageFor({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await blocked.addInitScript(() => {
+    const play = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function () {
+      if (this.matches('.journey__loop')) return Promise.reject(new DOMException('Autoplay bloqueado', 'NotAllowedError'));
+      return play.call(this);
+    };
+  });
+  await open(blocked);
+  await scene(blocked, 0, 'cafe');
+  assert.equal(await blocked.locator('cabrales-journey').getAttribute('data-loop-visible'), null);
+  await scene(blocked, .31, 'molido');
+  await blocked.close();
+
+  if (engine === 'chromium') {
+    const delayed = await pageFor({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    let releaseFilm;
+    const buffering = new Promise((resolve) => { releaseFilm = resolve; });
+    await delayed.route('**/media/cabrales-scroll-mobile.mp4', async (route) => {
+      await buffering;
+      await route.continue();
+    });
+    await open(delayed);
+    await intro(delayed);
+    await delayed.evaluate(() => scrollTo(0, 90));
+    await delayed.waitForFunction(() => document.querySelector('.journey__loop').paused);
+    assert.equal(await delayed.locator('cabrales-journey').getAttribute('data-loop-visible'), '');
+    assert.equal(await delayed.locator('cabrales-journey').getAttribute('data-frame-ready'), null);
+    releaseFilm();
+    await scene(delayed, .031, 'cafe');
+    await delayed.close();
+  }
+
+  const deep = await pageFor({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   await open(deep, '/#reunion');
   await deep.waitForFunction(() => document.querySelector('cabrales-journey').dataset.chapter === 'reunion');
+  assert.equal(await deep.locator('.journey__loop').getAttribute('src'), null, 'un ancla interna no solicita el loop de entrada');
   const missing = await deep.goto(new URL('/no-existe', base).href);
   assert.equal(missing.status(), 404);
   assert.equal(await deep.getByRole('link', { name: 'Ir al inicio' }).getAttribute('href'), '/');
