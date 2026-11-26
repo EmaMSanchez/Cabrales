@@ -482,6 +482,56 @@ p { text-wrap: pretty; }
   .product-card { padding: 12px; }
 }
 
+@media (width > 850px) and (aspect-ratio > 1/1) {
+  .site-header__desktop,
+  .scene__actions .button,
+  .site-footer h2,
+  .site-footer p,
+  .site-footer address,
+  .site-footer__legal {
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
+
+  .scene__kicker, .journey__hint, .product-card .button {
+    font-size: .875rem;
+    line-height: 1.25rem;
+  }
+
+  .scene__description {
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+  }
+
+  .scene--molido .scene__script { font-size: 3.75rem; }
+}
+
+@media (min-width: 1024px) and (max-width: 1150px) and (min-height: 640px) and (min-aspect-ratio: 8/5) {
+  .scene--molido .scene__copy { top: calc(39% - 24px); right: 24px; max-width: 15rem; }
+  .scene--molido .scene__title { font-size: 3rem; }
+}
+
+@media (min-width: 1200px) and (min-height: 640px) and (min-aspect-ratio: 8/5) {
+  .scene--molido .scene__copy {
+    top: calc(39% - 24px);
+    right: clamp(24px, 4vw - 24px, 64px);
+    max-width: 16rem;
+  }
+
+  .scene--molido .scene__title { max-width: 100%; font-size: 3.75rem; }
+}
+
+@media (min-width: 1200px) and (min-height: 700px) and (aspect-ratio > 1/1) {
+  .scene--cafe .scene__script, .scene--super .scene__script { font-size: 4.5rem; }
+}
+
+/* Leave the origins heading and cards room to clear each other on short windows. */
+@media (min-width: 1280px) and (min-height: 768px) and (aspect-ratio > 1/1) {
+  .scene--origenes .scene__title { font-size: 3.75rem; }
+  .product-card h3 { font-size: 1.875rem; line-height: 2.25rem; }
+  .product-card p { font-size: 1rem; line-height: 1.5rem; min-height: 3rem; }
+}
+
 @media (max-width: 850px), (max-aspect-ratio: 1/1) {
   :root { --edge: clamp(24px, 6vw, 64px); }
   .site-header__inner { min-height: 80px; }
