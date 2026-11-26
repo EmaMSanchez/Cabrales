@@ -46,7 +46,7 @@ const { home, editing } = Astro.props;
             <div class="scene__copy">
               {isEnd && <div class="scene__lock"><Icon name="lock" size={22} /></div>}
               <Heading id={`titulo-${scene.id}`} class="scene__heading" tabindex="-1">
-                <span class="scene__script">{scene.script}</span>
+                <span class="scene__script">{scene.script}</span>{' '}
                 <span class="scene__title">
                   {isOrigins ? words.map((word, wordIndex) => (
                     <><span class="scene__word" style={`--word: ${wordIndex}`}>{word}</span>{wordIndex < words.length - 1 ? ' ' : ''}</>

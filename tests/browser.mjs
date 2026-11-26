@@ -78,6 +78,32 @@ async function cardPoses(page) {
   }));
 }
 
+async function primaryActionOffset(page, id) {
+  return page.locator(`#${id} .scene__actions .button`).first().evaluate((button) =>
+    button.getBoundingClientRect().left - button.parentElement.getBoundingClientRect().left);
+}
+
+async function checkMolidoTitle(page) {
+  await page.evaluate(() => document.fonts.ready);
+  const lines = await page.locator('#molido .scene__title').evaluate((title) => {
+    const text = title.firstChild;
+    const split = text.textContent.lastIndexOf(' ');
+    const range = new Range();
+    range.setStart(text, 0);
+    range.setEnd(text, split);
+    const first = [...range.getClientRects()];
+    range.setStart(text, split + 1);
+    range.setEnd(text, text.length);
+    return {
+      first: new Set(first.map((box) => Math.round(box.top))).size,
+      distance: range.getBoundingClientRect().top - first[0].top,
+      lineHeight: parseFloat(getComputedStyle(title).lineHeight),
+    };
+  });
+  assert.equal(lines.first, 1, '«para cada forma de» se mantiene en la primera línea');
+  assert.ok(Math.abs(lines.distance - lines.lineHeight) <= 1, '«preparar» sigue en el siguiente renglón');
+}
+
 async function screenshot(page, id) {
   if (!capture) return;
   await mkdir('reports/screenshots', { recursive: true });
@@ -95,9 +121,20 @@ try {
   assert.equal(await desk.locator('[data-blok-uid]').count(), 0);
   assert.equal(await desk.locator('[data-motion-toggle], .motion-switch, [data-linear-link]').count(), 0);
   await scene(desk, 0, 'cafe');
+  const heading = desk.getByRole('heading', { level: 1, name: 'Café Cabrales', exact: true });
+  assert.match(await heading.textContent(), /Café\s+Cabrales/);
+  assert.equal(await heading.locator('img, svg').count(), 0);
+  const { x: heroMargin } = await desk.locator('#inicio .scene__copy').boundingBox();
+  assert.equal(await primaryActionOffset(desk, 'inicio'), -8);
   await screenshot(desk, 'desktop-inicio');
   const grind = await scene(desk, .31, 'molido');
+  await checkMolidoTitle(desk);
+  const { x, width } = await desk.locator('#molido .scene__copy').boundingBox();
+  assert.ok(Math.abs(1440 - x - width - heroMargin) <= 1, 'Molido respeta el margen editorial del inicio');
+  assert.equal(await primaryActionOffset(desk, 'molido'), -8);
+  await screenshot(desk, 'desktop-molido');
   const bag = await scene(desk, .575, 'super');
+  assert.equal(await primaryActionOffset(desk, 'super-cabrales'), -8);
   await screenshot(desk, 'desktop-super');
 
   await scene(desk, .68, 'origenes');
@@ -106,6 +143,7 @@ try {
   assert.ok(entering.every(({ opacity, scale, upright, interactive }) => opacity > 0 && opacity < .7 && scale < 1 && upright && !interactive));
   assert.ok(entering.every(({ offsetX }, index) => index < 2 ? offsetX > 0 : offsetX < 0));
   const family = await scene(desk, .765, 'origenes');
+  assert.equal(await primaryActionOffset(desk, 'productos'), -8);
   const settled = await cardPoses(desk);
   assert.ok(settled.every(({ opacity, scale, offsetX, upright, interactive }) => opacity === 1 && scale === 1 && offsetX === 0 && upright && interactive));
   assert.ok(settled[0].top + 24 < settled[1].top && settled[3].top + 24 < settled[2].top);
@@ -141,6 +179,7 @@ try {
   await open(mobile, '/cabrales-home-v2');
   await scene(mobile, 0, 'cafe');
   assert.equal(await mobile.locator('#inicio picture img').evaluate((i) => new URL(i.currentSrc).pathname), '/media/cafe-mobile.webp');
+  assert.equal(await primaryActionOffset(mobile, 'inicio'), -4);
   await screenshot(mobile, 'movil-inicio');
   await mobile.locator('.site-menu summary').tap();
   await mobile.locator('.site-menu__nav a[href="#productos"]').tap();
@@ -157,6 +196,10 @@ try {
   await screenshot(mobile, 'movil-origenes');
   await scene(mobile, .951, 'reunion');
   assert.ok(await scene(mobile, .52, 'super') < 17);
+  await scene(mobile, .31, 'molido');
+  await checkMolidoTitle(mobile);
+  await noOverflow(mobile);
+  await screenshot(mobile, 'movil-molido');
   await checkSource(mobile, mobVideo, 'mobile');
   await mobile.close();
 

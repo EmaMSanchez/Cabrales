@@ -230,7 +230,15 @@ p { text-wrap: pretty; }
   max-width: min(38vw, 680px);
 }
 .scene--cafe .scene__copy { top: 33%; }
-.scene--molido .scene__copy { top: 39%; left: auto; right: max(32px, 7vw); max-width: clamp(208px, 20vw, 310px); }
+.scene--molido .scene__copy {
+  top: 39%;
+  left: auto;
+  right: var(--edge);
+  /* Reserve space for the grinder in both wide and tall video crops. */
+  width: clamp(12rem, 50% - var(--edge) - max(12vw, 22svh, 7.75rem) - 8px, 32rem);
+  max-width: none;
+  container: molido-copy / inline-size;
+}
 .scene--super .scene__copy { top: 39%; }
 .scene--origenes .scene__copy { top: 10.5%; }
 
@@ -266,9 +274,22 @@ p { text-wrap: pretty; }
   word-spacing: .025em;
   transform: skewX(-7deg);
 }
-.scene--cafe .scene__title { font-size: 6rem; }
+.scene--cafe .scene__title {
+  font-size: 6rem;
+  transform: skewX(-13deg) scaleX(.85);
+  transform-origin: left center;
+}
 .scene--super .scene__title { font-size: 4.5rem; }
-.scene--molido .scene__title { max-width: 260px; }
+.scene--molido .scene__title {
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+  text-wrap: wrap;
+}
+
+@container molido-copy (min-width: 18.5rem) {
+  .scene--molido .scene__title { font-size: 2.25rem; line-height: 2.5rem; }
+}
+
 .scene--molido .scene__script, .scene--origenes .scene__script { font-size: 3rem; margin-bottom: -5px; }
 .scene__kicker {
   margin-top: 24px;
@@ -292,6 +313,10 @@ p { text-wrap: pretty; }
 .scene__heading + .scene__description { margin-top: 16px; }
 .scene__actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
 .scene--origenes .scene__actions { margin-top: 16px; }
+:is(.scene--cafe, .scene--molido, .scene--super, .scene--origenes) .scene__actions > .button:first-child {
+  position: relative;
+  inset-inline-start: -4px;
+}
 .scene__echo {
   position: absolute;
   left: 24%;
@@ -478,7 +503,6 @@ p { text-wrap: pretty; }
 @media (max-width: 1150px) {
   .scene--cafe .scene__title { font-size: 4.5rem; }
   .scene--super .scene__title { font-size: 3.75rem; }
-  .scene--molido .scene__title { font-size: 2.25rem; line-height: 1; }
   .product-card { padding: 12px; }
 }
 
@@ -503,22 +527,29 @@ p { text-wrap: pretty; }
     line-height: 1.75rem;
   }
 
-  .scene--molido .scene__script { font-size: 3.75rem; }
-}
+  /* Keep the copy above the grinder's side panels as they separate in the film. */
+  .journey[data-mode='motion'] .scene--molido .scene__copy { top: 16%; }
 
-@media (min-width: 1024px) and (max-width: 1150px) and (min-height: 640px) and (min-aspect-ratio: 8/5) {
-  .scene--molido .scene__copy { top: calc(39% - 24px); right: 24px; max-width: 15rem; }
-  .scene--molido .scene__title { font-size: 3rem; }
-}
-
-@media (min-width: 1200px) and (min-height: 640px) and (min-aspect-ratio: 8/5) {
-  .scene--molido .scene__copy {
-    top: calc(39% - 24px);
-    right: clamp(24px, 4vw - 24px, 64px);
-    max-width: 16rem;
+  :is(.scene--cafe, .scene--molido, .scene--super, .scene--origenes) .scene__actions > .button:first-child {
+    inset-inline-start: -8px;
   }
 
-  .scene--molido .scene__title { max-width: 100%; font-size: 3.75rem; }
+  @media (max-height: 540px) {
+    .scene--molido .scene__copy { top: 24%; }
+  }
+
+  @container molido-copy (min-width: 24.75rem) {
+    .scene--molido .scene__script { font-size: 3.75rem; }
+    .scene--molido .scene__title { font-size: 3rem; line-height: 1; }
+  }
+
+  @container molido-copy (min-width: 31rem) {
+    .scene--molido .scene__title { font-size: 3.75rem; line-height: 1; }
+  }
+}
+
+@media (min-width: 1024px) and (min-height: 640px) and (min-aspect-ratio: 8/5) {
+  .scene--molido .scene__copy { top: calc(39% - 24px); }
 }
 
 @media (min-width: 1200px) and (min-height: 700px) and (aspect-ratio > 1/1) {
@@ -550,7 +581,7 @@ p { text-wrap: pretty; }
   .scene--super .scene__copy { top: max(88px, 12%); }
   .scene--origenes .scene__layer { padding: max(48px, 7svh) var(--edge) 0; }
   .scene--origenes .scene__copy { position: relative; inset: auto; }
-  .scene--molido .scene__title { max-width: 280px; }
+  .scene--molido .scene__title { max-width: 20rem; }
   .scene--origenes .scene__title { font-size: 2.25rem; line-height: 2.5rem; }
   .scene__script { font-size: 3rem; }
   .scene__heading + .scene__description, .scene__description, .scene__kicker { margin-top: 12px; }
