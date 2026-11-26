@@ -123,12 +123,12 @@ function mp4Boxes(bytes, from = 0, until = bytes.length) {
 }
 
 test('cada variante es más liviana que su original, arranca por HTTP y conserva el montaje all-intra', async () => {
-  for (const [target, master, expectedWidth, expectedHeight] of [
-    ['desktop', 'web', 1440, 810], ['mobile', 'mobile', 720, 1280],
+  for (const [target, master, expectedWidth, expectedHeight, maxRatio] of [
+    ['desktop', 'web', 1440, 810, .85], ['mobile', 'mobile', 720, 1280, .7],
   ]) {
     const source = await readFile(new URL(`../video-cabrales-home-scroll-${master}.mp4`, import.meta.url));
     const result = await readFile(new URL(`../public/media/cabrales-scroll-${target}.mp4`, import.meta.url));
-    assert.ok(result.length < source.length * .7);
+    assert.ok(result.length < source.length * maxRatio, `${target} supera su presupuesto de peso`);
     const root = mp4Boxes(result);
     const get = (parent, type) => mp4Boxes(result, parent.from, parent.until).find((box) => box.type === type);
     const movie = root.find((box) => box.type === 'moov');

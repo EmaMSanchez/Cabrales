@@ -32,7 +32,9 @@ El token Preview y una firma vigente habilitan el iframe del Visual Editor. No s
 
 ## Video y sincronización
 
-El clip `Ejemplo-web-video.mp4` es solo referencia. Los masters de escritorio y móvil, de 22,542 s, quedan intactos. `public/media/` contiene derivados H.264 sin audio, con `faststart` y un cuadro clave por fotograma. Escritorio usa 1440 × 810 (9,8 MB); móvil usa 720 × 1280 (5,9 MB). El frontend elige según la orientación de la ventana y no carga el otro video. El primer póster se solicita antes que el video.
+El clip `Ejemplo-web-video.mp4` es solo referencia. Los masters de escritorio y móvil, de 22,542 s, quedan intactos. `public/media/` contiene derivados H.264 sin audio, con `faststart` y un cuadro clave por fotograma. Escritorio usa 1440 × 810; móvil usa 720 × 1280 (5,9 MB). El frontend elige según la orientación de la ventana y no carga el otro video. El primer póster se solicita antes que el video.
+
+Para probar un archivo de escritorio alternativo sin regenerar los pósteres ni el video móvil, pasá su ruta a `--solo-video-desktop`. Usá el mismo montaje y duración (541 fotogramas a 24 fps) para conservar los puntos de entrada de las escenas.
 
 | Scroll | Escena | Tiempo del montaje |
 | --- | --- | --- |
@@ -48,6 +50,7 @@ Al entrar en la escena de orígenes, las tarjetas aparecen con opacidad, escala 
 
 ```sh
 npm run media:prepare                # regenera los derivados a partir de los masters y el mock
+npm run media:prepare -- --solo-video-desktop ./video-cabrales-1440x810.mp4 # prueba otro MP4 de escritorio
 npm run media:prepare -- --inspeccion   # genera hojas de fotogramas en reports/media/
 ```
 

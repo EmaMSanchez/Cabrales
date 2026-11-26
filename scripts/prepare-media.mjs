@@ -34,6 +34,15 @@ async function frame(input, seconds, width) {
   return run(['-ss', String(seconds), '-i', input, '-frames:v', '1', '-an', '-vf', `scale=${width}:-2:flags=lanczos`, '-f', 'image2pipe', '-vcodec', 'png', '-'], true);
 }
 
+async function encodeFilm(variant, film) {
+  await run([
+    '-y', '-i', film.input, '-an', '-vf', `scale=${film.width}:-2:flags=lanczos`,
+    '-c:v', 'libx264', '-preset', 'slow', '-crf', String(film.crf),
+    '-pix_fmt', 'yuv420p', '-g', '1', '-bf', '0', '-movflags', '+faststart',
+    path.join(out, `cabrales-scroll-${variant}.mp4`),
+  ]);
+}
+
 async function productCrops() {
   const mock = (await readdir('.')).find((file) => file.startsWith('Home idea') && file.endsWith('.png'));
   if (!mock) throw new Error('No se encontró el mock de Home idea.');
@@ -67,6 +76,14 @@ async function productCrops() {
 
 await mkdir(out, { recursive: true });
 
+const desktopVideoOption = process.argv.indexOf('--solo-video-desktop');
+if (desktopVideoOption !== -1) {
+  const input = process.argv[desktopVideoOption + 1];
+  if (input?.startsWith('--')) throw new Error('Usá --solo-video-desktop [ruta-del-video].');
+  await encodeFilm('desktop', input ? { ...films.desktop, input, crf: 24 } : films.desktop);
+  process.exit(0);
+}
+
 if (process.argv.includes('--inspeccion')) {
   const inspection = path.resolve('reports/media');
   await mkdir(inspection, { recursive: true });
@@ -90,14 +107,7 @@ if (process.argv.includes('--inspeccion')) {
   const onlyStills = process.argv.includes('--solo-imagenes');
   await productCrops();
   for (const [variant, film] of Object.entries(films)) {
-    if (!onlyStills) {
-      await run([
-        '-y', '-i', film.input, '-an', '-vf', `scale=${film.width}:-2:flags=lanczos`,
-        '-c:v', 'libx264', '-preset', 'slow', '-crf', String(film.crf),
-        '-pix_fmt', 'yuv420p', '-g', '1', '-bf', '0', '-movflags', '+faststart',
-        path.join(out, `cabrales-scroll-${variant}.mp4`),
-      ]);
-    }
+    if (!onlyStills) await encodeFilm(variant, film);
     for (const [index, cut] of motionFrames.entries()) {
       const png = await frame(film.input, film.posters[index], film.width);
       await sharp(png).webp({ quality: index === 0 ? 84 : 80 }).toFile(path.join(out, `${cut}-${variant}.webp`));
