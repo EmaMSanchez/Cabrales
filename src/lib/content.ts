@@ -181,14 +181,17 @@ function marksFor(rows: Blok[], field: 'end_desktop' | 'end_mobile') {
 export function homeContent(raw?: Blok) {
   const blok = raw?.component === HOME_SLUG ? raw : undefined;
   const rows = blocks(blok?.scenes, SCENE_BLOCK);
+  const desktopFilm = art('cabrales-scroll-desktop.mp4');
   const mobileFilm = art('cabrales-scroll-mobile.mp4');
+  const desktop = asset(blok?.video_desktop, desktopFilm).src;
   const mobile = asset(blok?.video_mobile, mobileFilm).src;
   return {
     logo: asset(blok?.logo, art('cabrales-logo.webp', 'Cabrales')),
     film: {
-      desktop: asset(blok?.video_desktop, art('cabrales-scroll-desktop.mp4')).src,
+      desktop,
       mobile,
-      // The intro is cut against the supplied portrait film, not editorial replacements.
+      // Each intro is cut against its supplied film, not an editorial replacement.
+      desktopLoop: desktop === desktopFilm.src ? '/media/cabrales-loop-desktop.mp4' : undefined,
       mobileLoop: mobile === mobileFilm.src ? '/media/cabrales-loop-mobile.mp4' : undefined,
       desktopMarks: marksFor(rows, 'end_desktop'),
       mobileMarks: marksFor(rows, 'end_mobile'),

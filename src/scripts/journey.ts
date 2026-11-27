@@ -176,7 +176,7 @@ class CabralesJourney extends HTMLElement {
     this.#marks = markList(this.dataset[key === 'mobile' ? 'mobileMarks' : 'desktopMarks']);
     const source = this.dataset[key];
     if (!source || !this.#video.canPlayType('video/mp4')) { this.#fallback(); return; }
-    const loop = key === 'mobile' ? this.dataset.mobileLoop ?? '' : '';
+    const loop = this.dataset[key === 'mobile' ? 'mobileLoop' : 'desktopLoop'] ?? '';
     if (loop !== this.#loopSource) this.#resetLoop(loop);
     if (this.#video.getAttribute('src') !== source) {
       delete this.dataset.frameReady;

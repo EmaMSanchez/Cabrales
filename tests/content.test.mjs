@@ -13,6 +13,7 @@ test('las cinco escenas y los cuatro cafés tienen fallback sin Storyblok', () =
   assert.deepEqual(baseline.products.map(({ name }) => name), ['Brasil', 'Colombia', 'Perú', 'Prestige']);
   assert.deepEqual(homeContent({ component: 'default-page', meta_title: 'Otra Story' }), baseline);
   assert.deepEqual(baseline.film.desktopMarks, [...DEFAULT_MARKS]);
+  assert.equal(baseline.film.desktopLoop, '/media/cabrales-loop-desktop.mp4');
   assert.equal(baseline.film.mobileLoop, '/media/cabrales-loop-mobile.mp4');
   assert.equal(baseline.scenes.at(-1).actions[0].label, 'Agendar reunión');
 });
@@ -35,6 +36,7 @@ test('Storyblok puede cambiar el texto, la foto, los enlaces y los dos montajes 
   assert.equal(home.products.length, 1);
   assert.equal(home.products[0].image.alt, 'Una foto');
   assert.equal(home.film.desktop, 'https://a.storyblok.com/video.mp4');
+  assert.equal(home.film.desktopLoop, undefined, 'no se empalma un clip editorial con el loop local');
   assert.equal(home.film.mobile, '/media/cabrales-scroll-mobile.mp4');
   assert.equal(home.film.mobileLoop, '/media/cabrales-loop-mobile.mp4');
   const otherMobile = homeContent({ component: HOME_SLUG, video_mobile: '/media/alternativo.mp4' });
@@ -160,4 +162,10 @@ test('el loop móvil es liviano, silencioso y mantiene el encuadre de su montaje
   const result = await readFile(new URL('../public/media/cabrales-loop-mobile.mp4', import.meta.url));
   assert.ok(result.length < 1_000_000, 'el loop móvil supera su presupuesto de peso');
   assertSilentVideo(result, 720, 1280, 100);
+});
+
+test('el loop de escritorio conserva los 69 cuadros del corte y no tiene audio', async () => {
+  const result = await readFile(new URL('../public/media/cabrales-loop-desktop.mp4', import.meta.url));
+  assert.ok(result.length < 600_000, 'el loop de escritorio supera su presupuesto de peso');
+  assertSilentVideo(result, 1280, 720, 69);
 });

@@ -51,14 +51,14 @@ async function scene(page, progress, chapter) {
   return film.evaluate((v) => v.currentTime);
 }
 
-async function intro(page) {
+async function intro(page, variant = 'mobile') {
   await page.waitForFunction(() => {
     const journey = document.querySelector('cabrales-journey');
     const loop = journey.querySelector('.journey__loop');
     return journey.hasAttribute('data-loop-visible') && !loop.paused && loop.currentTime > .04;
   });
   const loop = page.locator('.journey__loop');
-  assert.equal(await loop.evaluate((video) => new URL(video.currentSrc).pathname), '/media/cabrales-loop-mobile.mp4');
+  assert.equal(await loop.evaluate((video) => new URL(video.currentSrc).pathname), `/media/cabrales-loop-${variant}.mp4`);
   assert.equal(await loop.evaluate((video) => video.muted && video.loop && video.playsInline), true);
 }
 
@@ -74,9 +74,7 @@ function videoRequests(page) {
 async function checkSource(page, paths, variant) {
   const film = `/media/cabrales-scroll-${variant}.mp4`;
   assert.equal(await page.locator('.journey__video').evaluate((video) => new URL(video.currentSrc).pathname), film);
-  const expected = new Set([film]);
-  if (variant === 'mobile') expected.add('/media/cabrales-loop-mobile.mp4');
-  else assert.equal(await page.locator('.journey__loop').getAttribute('src'), null);
+  const expected = new Set([film, `/media/cabrales-loop-${variant}.mp4`]);
   // WebKit on Windows fetches the video through its native media pipeline, outside Playwright's network events.
   if (engine === 'chromium' || paths.size) assert.deepEqual(paths, expected);
 }
@@ -140,8 +138,7 @@ try {
   assert.equal(await desk.locator('storyblok-preview').count(), 0);
   assert.equal(await desk.locator('[data-blok-uid]').count(), 0);
   assert.equal(await desk.locator('[data-motion-toggle], .motion-switch, [data-linear-link]').count(), 0);
-  await scene(desk, 0, 'cafe');
-  assert.equal(await desk.locator('cabrales-journey').getAttribute('data-loop-visible'), null);
+  await intro(desk, 'desktop');
   const heading = desk.getByRole('heading', { level: 1, name: 'Café Cabrales', exact: true });
   assert.match(await heading.textContent(), /Café\s+Cabrales/);
   assert.equal(await heading.locator('img, svg').count(), 0);
@@ -189,6 +186,7 @@ try {
   await desk.locator('.site-footer__up').click();
   assert.equal(new URL(desk.url()).hash, '#inicio');
   await scene(desk, 0, 'cafe');
+  await intro(desk, 'desktop');
   await noOverflow(desk);
   await checkSource(desk, deskVideo, 'desktop');
   await desk.close();
@@ -278,22 +276,26 @@ try {
   await blocked.close();
 
   if (engine === 'chromium') {
-    const delayed = await pageFor({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
-    let releaseFilm;
-    const buffering = new Promise((resolve) => { releaseFilm = resolve; });
-    await delayed.route('**/media/cabrales-scroll-mobile.mp4', async (route) => {
-      await buffering;
-      await route.continue();
-    });
-    await open(delayed);
-    await intro(delayed);
-    await delayed.evaluate(() => scrollTo(0, 90));
-    await delayed.waitForFunction(() => document.querySelector('.journey__loop').paused);
-    assert.equal(await delayed.locator('cabrales-journey').getAttribute('data-loop-visible'), '');
-    assert.equal(await delayed.locator('cabrales-journey').getAttribute('data-frame-ready'), null);
-    releaseFilm();
-    await scene(delayed, .031, 'cafe');
-    await delayed.close();
+    for (const variant of ['desktop', 'mobile']) {
+      const isMobile = variant === 'mobile';
+      const viewport = isMobile ? { width: 390, height: 844 } : { width: 1366, height: 768 };
+      const delayed = await pageFor({ viewport, isMobile, hasTouch: isMobile });
+      let releaseFilm;
+      const buffering = new Promise((resolve) => { releaseFilm = resolve; });
+      await delayed.route(`**/media/cabrales-scroll-${variant}.mp4`, async (route) => {
+        await buffering;
+        await route.continue();
+      });
+      await open(delayed);
+      await intro(delayed, variant);
+      await delayed.evaluate(() => scrollTo(0, 90));
+      await delayed.waitForFunction(() => document.querySelector('.journey__loop').paused);
+      assert.equal(await delayed.locator('cabrales-journey').getAttribute('data-loop-visible'), '');
+      assert.equal(await delayed.locator('cabrales-journey').getAttribute('data-frame-ready'), null);
+      releaseFilm();
+      await scene(delayed, .031, 'cafe');
+      await delayed.close();
+    }
   }
 
   const deep = await pageFor({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });

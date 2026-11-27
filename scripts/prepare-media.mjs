@@ -12,7 +12,11 @@ const films = {
   desktop: { input: 'video-cabrales-home-scroll-web.mp4', width: 1440, crf: 27, posters: [0, 7.5, 15.5, 21.75, 22.5] },
   mobile: { input: 'video-cabrales-home-scroll-mobile.mp4', width: 720, crf: 29, posters: [0, 7.5, 15.5, 21.75, 22.5] },
 };
-const mobileLoop = { input: 'loop-cafe-mobile-1080x1920.mp4', frames: 100, dissolve: 11, crf: 25 };
+const loops = {
+  // Frame 0 matches the scroll opening; frame 68 is the closest late return.
+  desktop: { input: 'loop-cafe-desktop.mp4', width: 1280, frames: 69, dissolve: 8, crf: 22 },
+  mobile: { input: 'loop-cafe-mobile-1080x1920.mp4', width: 720, frames: 100, dissolve: 11, crf: 25 },
+};
 const motionFrames = ['cafe', 'molido', 'super', 'origenes', 'reunion'];
 
 function run(args, pipe = false) {
@@ -44,12 +48,11 @@ async function encodeFilm(variant, film) {
   ]);
 }
 
-async function encodeMobileLoop({ input, frames, dissolve, crf }) {
-  // Preserve frame zero for the scroll handoff. Close the loop before the grinder
-  // visibly fills or spills, gently blending back to the opening composition.
+async function encodeLoop(variant, { input, width, frames, dissolve, crf }) {
+  // Preserve frame zero for the scroll handoff and gently return to it at the seam.
   const mix = `clip((N-${frames - dissolve})/${dissolve - 1},0,1)`;
   const filter = [
-    `[0:v]scale=${films.mobile.width}:-2:flags=lanczos,setsar=1,split[clip][opening]`,
+    `[0:v]scale=${width}:-2:flags=lanczos,setsar=1,split[clip][opening]`,
     `[clip]trim=end_frame=${frames},setpts=PTS-STARTPTS[body]`,
     '[opening]trim=end_frame=1,setpts=PTS-STARTPTS,loop=-1:1:0[still]',
     `[body][still]blend=all_expr='A*(1-${mix})+B*${mix}':shortest=1[out]`,
@@ -57,7 +60,7 @@ async function encodeMobileLoop({ input, frames, dissolve, crf }) {
   await run([
     '-y', '-i', input, '-filter_complex', filter, '-map', '[out]', '-an', '-frames:v', String(frames),
     '-c:v', 'libx264', '-preset', 'slow', '-crf', String(crf), '-pix_fmt', 'yuv420p',
-    '-g', '48', '-movflags', '+faststart', path.join(out, 'cabrales-loop-mobile.mp4'),
+    '-g', '48', '-movflags', '+faststart', path.join(out, `cabrales-loop-${variant}.mp4`),
   ]);
 }
 
@@ -94,8 +97,10 @@ async function productCrops() {
 
 await mkdir(out, { recursive: true });
 
-if (process.argv.includes('--solo-loop-movil')) {
-  await encodeMobileLoop(mobileLoop);
+const loopOnly = process.argv.includes('--solo-loop-desktop') ? 'desktop'
+  : process.argv.includes('--solo-loop-movil') ? 'mobile' : undefined;
+if (loopOnly) {
+  await encodeLoop(loopOnly, loops[loopOnly]);
   process.exit(0);
 }
 
