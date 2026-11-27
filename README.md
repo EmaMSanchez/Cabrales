@@ -15,7 +15,9 @@ La home se abre en `http://localhost:4321/`. Para trabajar con el Visual Editor,
 
 ## Storyblok
 
-La ruta pública `/` y la de vista previa `/cabrales-home-v2/` leen **únicamente** la Story `cabrales-home-v2`. El borrador ya existe en el Space de referencia (región `eu`), sin publicar. El frontend funciona con contenido local cuando el borrador está vacío, no hay token o la API no responde.
+La ruta pública `/` y la de vista previa `/cabrales-home-v2/` leen **únicamente** la Story `cabrales-home-v2`. La Story existe en el Space de referencia (región `eu`). El frontend funciona con contenido local cuando no encuentra el bloque de Cabrales, no hay token o la API no responde.
+
+La Story puede usar el tipo **Cabrales · Home V2** directamente o contener un bloque `cabrales-home-v2` dentro de `body` (por ejemplo, en `default-page`). Cargá `scenes`, `products`, menú, pie y SEO **dentro** del bloque de Cabrales: una escena o tarjeta suelta al mismo nivel en `body` no reemplaza el respaldo.
 
 1. Completá `.env` a partir de `.env.example`, conservando los secretos solo en tu entorno. `STORYBLOK_PREVIEW_TOKEN` se usa para leer borradores; `STORYBLOK_SPACE_ID` identifica el Space del Visual Editor. Verificá la conexión con `npm run cms:check`.
 2. Creá el tipo de contenido **Cabrales · Home V2** y sus dos bloques anidados en el Space. Para aplicar el [modelo incluido](scripts/storyblok-model.mjs), configurá localmente `STORYBLOK_MANAGEMENT_TOKEN` con permisos sobre la Story y la Block Library. Ejecutá `npm run cms:provision` para revisar y, si coincide el borrador, `npm run cms:provision -- --apply`. El script no duplica Stories, no reemplaza un borrador con contenido y no publica. No modifica `default-page`, `hero-section` ni la Story anterior `cabrales`.
@@ -70,7 +72,7 @@ npm run build
 npm start
 ```
 
-La prueba de navegador requiere Chrome instalado y el servidor HTTPS local en ejecución. `CABRALES_TEST_URL` permite usar otra URL y `CABRALES_SCREENSHOTS=1` guarda capturas en `reports/screenshots/`. Para WebKit, instalalo con `npm exec -- playwright-core install webkit` y ejecutá la suite con `CABRALES_ENGINE=webkit`.
+La prueba de navegador requiere Chrome instalado y un servidor local en ejecución que muestre el contenido de respaldo, sin una Story editorial activa. `CABRALES_TEST_URL` permite usar otra URL y `CABRALES_SCREENSHOTS=1` guarda capturas en `reports/screenshots/`. Para WebKit, instalalo con `npm exec -- playwright-core install webkit` y ejecutá la suite con `CABRALES_ENGINE=webkit`.
 
 Fuera de Netlify, el build genera un servidor Astro para Node. Si lo alojás en otro proveedor, serví los MP4 con soporte de solicitudes por rango (`206 Partial Content`).
 
@@ -80,4 +82,4 @@ Fuera de Netlify, el build genera un servidor Astro para Node. Si lo alojás en 
 2. En **Project configuration → Environment variables**, cargá `STORYBLOK_PUBLIC_TOKEN` (token Public de Delivery API), `STORYBLOK_REGION=eu`, `SITE_URL` con el dominio HTTPS y `SITE_INDEXABLE=false` hasta aprobar la salida. Los valores para Astro deben estar disponibles en **Functions** si Netlify permite elegir el alcance. Volvé a desplegar después de cambiar variables.
 3. Para el Visual Editor, cargá también `STORYBLOK_PREVIEW_TOKEN` y `STORYBLOK_SPACE_ID` en el entorno que se usará de vista previa. Agregá su URL base HTTPS como entorno adicional en Storyblok y elegilo desde `cabrales-home-v2`. El frontend solo entrega borradores a solicitudes firmadas. No subas `.env` ni configures el token de Management en Netlify.
 
-La home consulta Storyblok desde el servidor. Una vez que la Story tenga su tipo dedicado y se publique, no necesita un nuevo build para leer cambios de contenido. Si se habilita la indexación, solo se indexa `/` con la Story publicada disponible.
+La home consulta la versión publicada de Storyblok desde el servidor. Una vez desplegado el lector y configurado el token Public, no hace falta un nuevo build al publicar cambios de contenido; la respuesta pública admite caché compartido de 60 segundos. La vista previa no se cachea. Si se habilita la indexación, solo se indexa `/` cuando la Story publicada contiene el bloque de Cabrales.

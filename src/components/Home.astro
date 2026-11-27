@@ -4,7 +4,7 @@ import Header from './Header.astro';
 import Journey from './Journey.astro';
 import Footer from './Footer.astro';
 import Base from '../layouts/Base.astro';
-import { HOME_SLUG, homeContent } from '../lib/content.ts';
+import { homeContent } from '../lib/content.ts';
 import { editorAttributes, type Delivery } from '../lib/storyblok.ts';
 
 interface Props { delivery: Delivery }
@@ -21,8 +21,8 @@ const home = homeContent(delivery.block);
     <Journey home={home} editing={delivery.editing} />
   </main>
   <Footer home={home} />
-  {delivery.editing && delivery.block?.component !== HOME_SLUG && (
-    <aside class="editor-notice">Vista del contenido local. Asigná a esta Story el tipo <strong>Cabrales · Home V2</strong> para editar la experiencia.</aside>
+  {delivery.editing && !delivery.block && (
+    <aside class="editor-notice">Vista del contenido local. Usá <strong>Cabrales · Home V2</strong> como tipo de la Story o como bloque dentro de Body.</aside>
   )}
   {delivery.editing && <StoryblokPreview />}
 </Base>

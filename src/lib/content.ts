@@ -178,8 +178,13 @@ function marksFor(rows: Blok[], field: 'end_desktop' | 'end_mobile') {
   return validMarks(marks) ? marks : [...DEFAULT_MARKS];
 }
 
+export function resolveHomeBlock(raw?: Blok): Blok | undefined {
+  // The dedicated home can also be placed inside a shared page template.
+  return raw?.component === HOME_SLUG ? raw : blocks(raw?.body, HOME_SLUG)[0];
+}
+
 export function homeContent(raw?: Blok) {
-  const blok = raw?.component === HOME_SLUG ? raw : undefined;
+  const blok = resolveHomeBlock(raw);
   const rows = blocks(blok?.scenes, SCENE_BLOCK);
   const desktopFilm = art('cabrales-scroll-desktop.mp4');
   const mobileFilm = art('cabrales-scroll-mobile.mp4');

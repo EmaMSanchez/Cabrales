@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { HOME_SLUG, PRODUCT_BLOCK, SCENE_BLOCK, homeContent, safeHref } from '../src/lib/content.ts';
+import { HOME_SLUG, PRODUCT_BLOCK, SCENE_BLOCK, homeContent, resolveHomeBlock, safeHref } from '../src/lib/content.ts';
 import { isSignedPreview } from '../src/lib/preview.ts';
 import { DEFAULT_MARKS, SCENE_IDS, SCROLL_STOP, filmTime, originsCardEntry, readableStop, sceneAt, scenePose } from '../src/lib/timeline.ts';
 import { components, isEmptyDefaultDraft, seedContent } from '../scripts/storyblok-model.mjs';
@@ -45,6 +45,45 @@ test('Storyblok puede cambiar el texto, la foto, los enlaces y los dos montajes 
   // Reject a descending list of times rather than desynchronizing a chapter.
   const invalid = homeContent({ component: HOME_SLUG, scenes: [{ component: SCENE_BLOCK, scene_key: 'cafe', end_desktop: '13' }] });
   assert.deepEqual(invalid.film.desktopMarks, [...DEFAULT_MARKS]);
+});
+
+test('la home dedicada conserva sus campos y respaldos cuando está dentro de Body', () => {
+  const inner = {
+    component: HOME_SLUG,
+    _uid: 'home-editorial',
+    logo: { filename: '/marca-editorial.webp' },
+    video_mobile: '/montaje-editorial.mp4',
+    scroll_hint: 'Explorá el café',
+    scenes: [{ component: SCENE_BLOCK, scene_key: 'cafe', title: 'Café desde Storyblok', end_desktop: 3.1 }],
+    products: [{ component: PRODUCT_BLOCK, product_key: 'brasil', name: 'Brasil del editor' }],
+    products_label: 'Nuestros cafés',
+    footer_tagline: 'De la costa a tu taza',
+    meta_title: 'Cafés de origen | Cabrales',
+  };
+  const loose = [
+    { component: SCENE_BLOCK, scene_key: 'molido', title: 'Escena por fuera del bloque' },
+    { component: PRODUCT_BLOCK, name: 'Café por fuera del bloque' },
+  ];
+  const wrapper = { component: 'default-page', meta_title: 'Título del contenedor', body: [null, ...loose, inner] };
+  assert.equal(resolveHomeBlock(wrapper), inner, 'se conserva la identidad del bloque para el Visual Editor');
+  assert.deepEqual(homeContent(wrapper), homeContent(inner));
+  const home = homeContent(wrapper);
+  assert.equal(home.scenes[0].title, 'Café desde Storyblok');
+  assert.equal(home.scenes[1].title, 'para cada forma de preparar');
+  assert.deepEqual(home.products.map((product) => product.name), ['Brasil del editor']);
+  assert.equal(home.products[0].image.src, '/media/pack-brasil.webp');
+  assert.equal(home.logo.src, '/marca-editorial.webp');
+  assert.equal(home.hint, 'Explorá el café');
+  assert.equal(home.navigation[0].label, 'Nuestros cafés');
+  assert.equal(home.footer.tagline, 'De la costa a tu taza');
+  assert.equal(home.meta.title, 'Cafés de origen | Cabrales');
+  assert.equal(home.film.desktopMarks[1], 3.1);
+  assert.equal(home.film.desktopLoop, '/media/cabrales-loop-desktop.mp4');
+  assert.equal(home.film.mobileLoop, undefined);
+
+  assert.equal(homeContent({ ...inner, body: [{ ...inner, meta_title: 'No tiene prioridad' }] }).meta.title, inner.meta_title);
+  assert.deepEqual(homeContent({ ...wrapper, body: loose }), homeContent());
+  assert.deepEqual(homeContent({ ...wrapper, body: inner }), homeContent(), 'Body debe ser una lista de bloques');
 });
 
 test('los destinos editoriales solamente permiten rutas, anclas, HTTPS, teléfono y correo', () => {

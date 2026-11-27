@@ -7,7 +7,7 @@ import {
   STORYBLOK_SPACE_ID,
 } from 'astro:env/server';
 import { storyblokEditable } from '@storyblok/astro';
-import { HOME_SLUG, type Blok } from './content.ts';
+import { HOME_SLUG, resolveHomeBlock, type Blok } from './content.ts';
 import { deliveryHosts, isSignedPreview } from './preview.ts';
 
 export function editorAttributes(block: Blok | undefined, editing: boolean) {
@@ -40,8 +40,8 @@ export async function readHome(url: URL) {
       if (response.ok) {
         const { story } = await response.json() as { story?: { id: number; full_slug: string; content?: Blok } };
         if (story?.full_slug === HOME_SLUG && (!editing || String(story.id) === url.searchParams.get('_storyblok'))) {
-          block = story.content;
-          connected = Boolean(block);
+          connected = Boolean(story.content);
+          block = resolveHomeBlock(story.content);
         }
       } else if (response.status !== 404) {
         console.warn(`[Storyblok] Delivery API respondió con HTTP ${response.status}.`);
