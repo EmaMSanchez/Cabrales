@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="es-AR">
+<meta charset="utf-8">
+<title>Cabrales · SDK oficial de Storyblok con Astro y Netlify</title>
+<style>
+  @page { size: A4; margin: 16mm 17mm; }
+  * { box-sizing: border-box; }
+  body { margin: 0; color: #291d16; font: 11pt/1.45 "Segoe UI", Arial, sans-serif; }
+  main { max-width: 176mm; margin: auto; }
+  .page { min-height: 260mm; display: flex; flex-direction: column; break-after: page; }
+  .page:last-child { break-after: auto; }
+  .folio { letter-spacing: .12em; text-transform: uppercase; font-size: 9pt; font-weight: 700; padding-bottom: 9px; border-bottom: 2px solid #77452c; color: #77452c; }
+  h1 { margin: 20px 0 9px; font: 700 31pt/1.04 Georgia, serif; letter-spacing: -.025em; }
+  h2 { margin: 18px 0 5px; font-size: 14pt; }
+  p { margin: 0 0 10px; }
+  .lead { font-size: 13pt; color: #573e2f; margin: 4px 0 12px; }
+  pre, aside { margin: 8px 0 12px; padding: 10px 13px; background: #f6eee6; border-left: 3px solid #77452c; break-inside: avoid; }
+  code { font: 9.6pt/1.5 Consolas, monospace; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  aside p { margin: 4px 0 0; }
+  ol { padding-left: 24px; margin: 7px 0 12px; }
+  li { padding-left: 3px; margin: 0 0 8px; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0 12px; }
+  th, td { border-bottom: 1px solid #d7c5b7; padding: 7px 8px; text-align: left; vertical-align: top; }
+  th { background: #f6eee6; }
+  tr { break-inside: avoid; }
+  a { color: #683824; overflow-wrap: anywhere; }
+  footer { margin-top: auto; padding-top: 10px; border-top: 1px solid #d7c5b7; font-size: 9pt; color: #654c3b; }
+  @media screen {
+    body { background: #f6eee6; padding: 24px; }
+    main { max-width: 210mm; }
+    .page { min-height: 272mm; background: white; padding: 12mm 17mm; margin-bottom: 24px; }
+  }
+</style>
+<main>
+  <section class="page">
+    <div class="folio">Cabrales · Configuración técnica · 01 / 04</div>
+    <h1>Instalar el SDK oficial</h1>
+    <p class="lead">Astro, Storyblok y Netlify · Home V2 · noviembre de 2026</p>
+    <p>Esta guía reemplaza los pasos de conexión del PDF 02 anterior. Si otra guía pide migrar la Story al tipo dedicado, no sigas ese paso: la conexión actual admite el bloque anidado en <strong>Default Page</strong>.</p>
+    <h2>1. Instalá los dos paquetes</h2>
+    <p><strong>En el repositorio de Cabrales:</strong> usá Node.js 24.14 o superior y ejecutá <code>npm ci</code>. Ambos paquetes ya están declarados en <code>package.json</code> y en el archivo de versiones bloqueadas.</p>
+    <p><strong>Si partís de otro proyecto Astro nuevo:</strong> agregá los dos paquetes que usa esta guía.</p>
+    <pre><code>npm install @storyblok/astro@11 @storyblok/api-client@0.14.0</code></pre>
+    <table>
+      <tr><th>Paquete</th><th>Qué hace</th></tr>
+      <tr><td><code>@storyblok/astro</code> 11</td><td>Atributos editables y <code>StoryblokPreview</code>. No trae el cliente de lectura ni requiere <code>storyblok()</code> en <code>astro.config.mjs</code>.</td></tr>
+      <tr><td><code>@storyblok/api-client</code></td><td>Lee Delivery API desde el servidor con <code>createApiClient()</code> y <code>client.stories.get()</code>.</td></tr>
+    </table>
+    <h2>2. Usá la estructura que ya existe</h2>
+    <p>En <strong>Content → <code>cabrales-home-v2</code> → Body</strong>, seleccioná el bloque cuya <strong>clave técnica</strong> sea <code>cabrales-home-v2</code>. Las escenas y los productos se editan <em>dentro</em> de ese bloque. No crees otra Story, no cambies el slug y no modifiques el tipo compartido.</p>
+    <aside><strong>Instalar no alcanza.</strong><p>El SDK no configura tus credenciales. Cabrales ya lo llama desde <code>src/lib/storyblok.ts</code>. El transporte de <code>src/lib/storyblok-delivery.ts</code> valida el 301 de la CDN; <code>src/lib/content.ts</code> conserva el mapeo y los respaldos.</p></aside>
+    <footer>Cabrales · SDK oficial de Storyblok · Instalación</footer>
+  </section>
+  <section class="page">
+    <div class="folio">Cabrales · Configuración técnica · 02 / 04</div>
+    <h1>Conectar en local</h1>
+    <p class="lead">Verificá los dos tokens antes de llevarlos a Netlify.</p>
+    <h2>3. Completá el entorno local</h2>
+    <p>En el <strong>Space actual → Settings → Access Tokens</strong>, identificá un token <strong>Public</strong> y otro <strong>Preview</strong> de Delivery API. Tomá el ID numérico del Space (no el de la Story).</p>
+    <pre><code># PowerShell: no sobrescribe un .env existente
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }</code></pre>
+    <table>
+      <tr><th>Variable</th><th>Valor</th></tr>
+      <tr><td><code>STORYBLOK_REGION</code></td><td><code>eu</code> · <code>api.storyblok.com</code></td></tr>
+      <tr><td><code>STORYBLOK_PUBLIC_TOKEN</code></td><td>Token Public del Space. Solo contenido publicado.</td></tr>
+      <tr><td><code>STORYBLOK_PREVIEW_TOKEN</code></td><td>Token Preview del mismo Space. Permite leer borradores.</td></tr>
+      <tr><td><code>STORYBLOK_SPACE_ID</code></td><td>ID numérico del mismo Space. Sirve para comprobar la conexión y validar la firma del Visual Editor.</td></tr>
+    </table>
+    <p>No subas el <code>.env</code> a Git ni pegues tokens en el frontend, capturas o chats. No necesitás un token de Management: esta conexión solo lee datos.</p>
+    <h2>4. Probá borrador y publicado por separado</h2>
+    <pre><code>npm run cms:check
+npm run cms:check -- --publicado</code></pre>
+    <p>Esperá <strong>«Conexión OK»</strong> para <code>draft</code> y <code>published</code>, región <code>eu</code> y bloque en <strong>Body</strong>. Si cargaste el ID del Space, el comando lo contrasta con el de la API. El primer comando usa Preview; el segundo exige Public.</p>
+    <h2>5. Abrí el Visual Editor, si lo necesitás</h2>
+    <p>Ejecutá <code>npm run dev:editor</code>. Abrí <code>https://localhost:4321/cabrales-home-v2/</code> y confirmá el certificado local. En Storyblok, agregá <code>https://localhost:4321/</code> como entorno <strong>adicional</strong> si hace falta. Elegilo en la Story; no reemplaces el del sitio anterior.</p>
+    <footer>Cabrales · SDK oficial de Storyblok · Entorno local</footer>
+  </section>
+  <section class="page">
+    <div class="folio">Cabrales · Configuración técnica · 03 / 04</div>
+    <h1>Configurar Netlify</h1>
+    <p class="lead">Las variables de tu PC no se copian automáticamente a producción.</p>
+    <h2>6. Cargá las variables en el sitio correcto</h2>
+    <p>Abrí <strong>cabrales-home → Project configuration → Environment variables</strong>. Revisá el contexto <strong>Production</strong> y, si el plan permite seleccionar el alcance, incluí <strong>Functions</strong>. Solo <em>Builds</em> no alcanza.</p>
+    <table>
+      <tr><th>Variable</th><th>Qué se carga</th></tr>
+      <tr><td><code>STORYBLOK_PUBLIC_TOKEN</code></td><td>Token Public del Space actual. Obligatorio para leer la versión pública.</td></tr>
+      <tr><td><code>STORYBLOK_REGION</code></td><td><code>eu</code>.</td></tr>
+      <tr><td><code>STORYBLOK_PREVIEW_TOKEN</code><br><code>STORYBLOK_SPACE_ID</code></td><td>Del mismo Space. Cargalos en el contexto que usás para el Visual Editor. No reemplazan al Public.</td></tr>
+      <tr><td><code>SITE_URL</code><br><code>SITE_INDEXABLE</code></td><td>Conservá la configuración de SEO. No habilites indexación como parte de la prueba.</td></tr>
+    </table>
+    <h2>7. Desplegá el código o aplicá las variables nuevas</h2>
+    <ol>
+      <li>En <strong>Deploys</strong>, comprobá que el deploy publicado venga de <code>main</code> e incluya el cambio del SDK.</li>
+      <li>Si cambiaste variables <em>después</em> de ese deploy, desplegá una vez más para que las funciones las reciban.</li>
+      <li>Abrí <a href="https://cabrales-home.netlify.app/">cabrales-home.netlify.app/</a> y compará titular y descripción con la versión <strong>publicada</strong> de la Story.</li>
+      <li>Para el Visual Editor remoto, usá la URL HTTPS del entorno como opción adicional y comprobá que se muestra el borrador.</li>
+    </ol>
+    <aside><strong>Desplegar código no es publicar contenido.</strong><p>Desplegá al cambiar código o variables. Para cambiar texto, imágenes o enlaces ya conectados, publicá la Story sin volver a desplegar.</p></aside>
+    <footer>Cabrales · SDK oficial de Storyblok · Producción</footer>
+  </section>
+  <section class="page">
+    <div class="folio">Cabrales · Configuración técnica · 04 / 04</div>
+    <h1>Publicar y verificar</h1>
+    <p class="lead">Probá la edición completa sin tocar el diseño ni reconstruir el sitio.</p>
+    <h2>8. Probá una publicación editorial</h2>
+    <ol>
+      <li>En <strong>Content → <code>cabrales-home-v2</code> → Body → Cabrales Home V2 → Scenes → Café</strong>, guardá un cambio autorizado en <code>title</code> o <code>description</code>. Guardar no lo hace público.</li>
+      <li>Revisalo en la vista previa. Cuando esté aprobado, hacé clic en <strong>Publish</strong> en la misma Story.</li>
+      <li>Dejá vencer la caché pública de Netlify (60 segundos), más la propagación de Storyblok. Volvé a abrir la home y <code>/cabrales-home-v2/</code>. Verificá los valores nuevos sin otro deploy. Un TTL configurado en el Public de Storyblok puede sumar demora.</li>
+    </ol>
+    <h2>Si sigue mostrando los valores de respaldo</h2>
+    <table>
+      <tr><th>Qué ves</th><th>Qué revisar primero</th></tr>
+      <tr><td>Preview actual; público anterior</td><td>Confirmá <strong>Publish</strong> y ejecutá <code>npm run cms:check -- --publicado</code>. Revisá Public, Production / Functions y el deploy activo.</td></tr>
+      <tr><td>El chequeo no encuentra el bloque</td><td>Buscá la clave <code>cabrales-home-v2</code> en Body. Café debe estar en <code>scenes</code> del bloque; una escena suelta no cuenta.</td></tr>
+      <tr><td>API devuelve 301 con <code>cv</code></td><td>Es normal para contenido publicado. <code>cv</code> identifica la versión de caché del Space. La conexión valida el destino del 301. No fijes un <code>cv</code> ni lo reemplaces por la hora actual.</td></tr>
+      <tr><td>La vista previa no carga</td><td>Verificá Preview, el ID del Space, el entorno HTTPS y que entrás desde el Visual Editor. La vista válida es privada y no se cachea.</td></tr>
+    </table>
+    <p>Si la API responde bien y la web no, consultá <strong>Functions</strong> en Netlify. No imprimas tokens ni URLs completas de Delivery API en los logs.</p>
+    <p>Documentación: <a href="https://www.storyblok.com/docs/packages/storyblok-astro">SDK de Astro</a> · <a href="https://www.storyblok.com/docs/libraries/js/content-delivery-api-client">Cliente de API</a> · <a href="https://www.storyblok.com/docs/concepts/caching">Caché de Storyblok</a> · <a href="https://docs.netlify.com/build/functions/environment-variables/">Variables en Netlify Functions</a>.</p>
+    <footer>Cabrales · SDK oficial de Storyblok · Publicación y diagnóstico</footer>
+  </section>
+</main>
+</html>

@@ -8,7 +8,8 @@ import {
 } from 'astro:env/server';
 import { storyblokEditable } from '@storyblok/astro';
 import { HOME_SLUG, resolveHomeBlock, type Blok } from './content.ts';
-import { deliveryHosts, isSignedPreview } from './preview.ts';
+import { isSignedPreview } from './preview.ts';
+import { createHomeDeliveryClient } from './storyblok-delivery.ts';
 
 export function editorAttributes(block: Blok | undefined, editing: boolean) {
   if (!editing || !block?._editable) return {};
@@ -32,19 +33,17 @@ export async function readHome(url: URL) {
 
   if (token) {
     try {
-      const host = deliveryHosts[STORYBLOK_REGION] ?? deliveryHosts.eu;
-      const api = new URL(`https://${host}/v2/cdn/stories/${HOME_SLUG}`);
-      api.searchParams.set('token', token);
-      api.searchParams.set('version', draft ? 'draft' : 'published');
-      const response = await fetch(api, { signal: AbortSignal.timeout(3800), redirect: 'error' });
-      if (response.ok) {
-        const { story } = await response.json() as { story?: { id: number; full_slug: string; content?: Blok } };
-        if (story?.full_slug === HOME_SLUG && (!editing || String(story.id) === url.searchParams.get('_storyblok'))) {
-          connected = Boolean(story.content);
-          block = resolveHomeBlock(story.content);
-        }
-      } else if (response.status !== 404) {
-        console.warn(`[Storyblok] Delivery API respondió con HTTP ${response.status}.`);
+      const version = draft ? 'draft' : 'published';
+      const client = createHomeDeliveryClient(token, STORYBLOK_REGION, version);
+      const { data, error, response } = await client.stories.get(HOME_SLUG, { query: { version } });
+      const story = data?.story;
+      if (story?.full_slug === HOME_SLUG && (!editing || String(story.id) === url.searchParams.get('_storyblok'))) {
+        connected = Boolean(story.content);
+        block = resolveHomeBlock(story.content);
+      } else if (error && response.status !== 404) {
+        console.warn(response.status
+          ? `[Storyblok] Delivery API respondió con HTTP ${response.status} (${version}).`
+          : `[Storyblok] Delivery API no disponible (${version}); se muestra el contenido local.`);
       }
     } catch {
       console.warn('[Storyblok] Delivery API no disponible; se muestra el contenido local.');

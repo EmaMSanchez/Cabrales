@@ -16,9 +16,9 @@ export function isSignedPreview(url: URL, token?: string, spaceId?: string, now 
   return timingSafeEqual(expected, Buffer.from(signature, 'hex'));
 }
 
-export const deliveryHosts: Record<string, string> = {
+export const deliveryHosts = {
   eu: 'api.storyblok.com',
   us: 'api-us.storyblok.com',
   ca: 'api-ca.storyblok.com',
   ap: 'api-ap.storyblok.com',
-};
+} as const;

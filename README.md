@@ -15,16 +15,20 @@ La home se abre en `http://localhost:4321/`. Para trabajar con el Visual Editor,
 
 ## Storyblok
 
+La [guía de instalación y diagnóstico](docs/storyblok-sdk.html) se puede abrir en el navegador e imprimir a PDF.
+
+Este repositorio incluye `@storyblok/astro` 11 para el Visual Editor y `@storyblok/api-client` para la lectura desde el servidor. Usá `npm ci` en Cabrales. En un proyecto nuevo, instalá ambos con `npm install @storyblok/astro@11 @storyblok/api-client@0.14.0`. [Documentación oficial](https://www.storyblok.com/docs/packages/storyblok-astro).
+
 La ruta pública `/` y la de vista previa `/cabrales-home-v2/` leen **únicamente** la Story `cabrales-home-v2`. La Story existe en el Space de referencia (región `eu`). El frontend funciona con contenido local cuando no encuentra el bloque de Cabrales, no hay token o la API no responde.
 
 La Story puede usar el tipo **Cabrales · Home V2** directamente o contener un bloque `cabrales-home-v2` dentro de `body` (por ejemplo, en `default-page`). Cargá `scenes`, `products`, menú, pie y SEO **dentro** del bloque de Cabrales: una escena o tarjeta suelta al mismo nivel en `body` no reemplaza el respaldo.
 
 1. Completá `.env` a partir de `.env.example`, conservando los secretos solo en tu entorno. `STORYBLOK_PREVIEW_TOKEN` se usa para leer borradores; `STORYBLOK_SPACE_ID` identifica el Space del Visual Editor. Verificá la conexión con `npm run cms:check`.
-2. Creá el tipo de contenido **Cabrales · Home V2** y sus dos bloques anidados en el Space. Para aplicar el [modelo incluido](scripts/storyblok-model.mjs), configurá localmente `STORYBLOK_MANAGEMENT_TOKEN` con permisos sobre la Story y la Block Library. Ejecutá `npm run cms:provision` para revisar y, si coincide el borrador, `npm run cms:provision -- --apply`. El script no duplica Stories, no reemplaza un borrador con contenido y no publica. No modifica `default-page`, `hero-section` ni la Story anterior `cabrales`.
+2. Ejecutá `npm run cms:check -- --publicado` con el token Public del mismo Space para verificar la versión publicada. Ambos chequeos reconocen el bloque en Body y, si configuraste `STORYBLOK_SPACE_ID`, verifican el Space. En el Space actual usá la Story y los bloques existentes; no hace falta provisionar ni cambiar el tipo `Default Page`.
 3. En **Settings → Visual Editor**, agregá `https://localhost:4321/` como entorno **adicional** para desarrollo. En el borrador elegí ese entorno. El slug ya coincide con la ruta; si la Story tiene un Real path distinto, ajustá **solo ese borrador** a `/cabrales-home-v2/`. No reemplaces la URL global que usa el otro proyecto.
 4. Cargá los MP4 optimizados en `video_desktop` y `video_mobile`, o dejá vacíos esos campos para usar las versiones locales. Los videos en Storyblok necesitan un Space habilitado para ese tipo de asset; también podés usar un CDN HTTPS que sirva MP4 con solicitudes `Range`. Los pósters, las fotos, el logo, los textos y los enlaces se pueden configurar en los campos correspondientes. Al guardar, el editor recarga la vista en modo estático para que todas las escenas sean seleccionables. Probá el recorrido con scroll en la home abierta fuera del Visual Editor.
 
-El token Preview y una firma vigente habilitan el iframe del Visual Editor. No se envía ningún token a la página. Fuera del editor, el iframe está bloqueado y producción consulta `published` con `STORYBLOK_PUBLIC_TOKEN`.
+El token Preview y una firma vigente habilitan el iframe del Visual Editor. No se envía ningún token a la página. Fuera del editor, el iframe está bloqueado y producción consulta `published` con `STORYBLOK_PUBLIC_TOKEN`. El cliente sigue el `301` de caché solo si el destino conserva el dominio regional, la Story, el token y `version=published`; no reutiliza un `cv` anterior al pedir contenido publicado.
 
 ### Enlaces y material a validar
 

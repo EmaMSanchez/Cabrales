@@ -24,6 +24,7 @@
     "@astrojs/node": "^11.1.14",
     "@fontsource-variable/manrope": "^5.3.0",
     "@fontsource/yellowtail": "^5.3.0",
+    "@storyblok/api-client": "0.14.0",
     "@storyblok/astro": "^11.0.0",
     "astro": "^7.4.13",
     "gsap": "^3.15.0"
